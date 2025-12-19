@@ -1,39 +1,47 @@
-// Mock customer fields from contacts and leads tables
+// Updated CustomerField interface to include accounts table
 export interface CustomerField {
   id: string;
   name: string;
   displayName: string;
-  table: 'contacts' | 'leads';
+  table: 'contacts' | 'leads' | 'accounts';
   type: 'string' | 'number' | 'date' | 'boolean';
 }
 
+// Generate account fields dynamically from Account interface
 export const customerFields: CustomerField[] = [
-  { id: 'company_name', name: 'company_name', displayName: 'Company Name', table: 'contacts', type: 'string' },
-  { id: 'address', name: 'address', displayName: 'Address', table: 'contacts', type: 'string' },
-  { id: 'city', name: 'city', displayName: 'City', table: 'contacts', type: 'string' },
-  { id: 'state', name: 'state', displayName: 'State/Province', table: 'contacts', type: 'string' },
-  { id: 'zip_code', name: 'zip_code', displayName: 'ZIP/Postal Code', table: 'contacts', type: 'string' },
-  { id: 'country', name: 'country', displayName: 'Country', table: 'contacts', type: 'string' },
-  { id: 'email', name: 'email', displayName: 'Email Address', table: 'contacts', type: 'string' },
-  { id: 'phone', name: 'phone', displayName: 'Phone Number', table: 'contacts', type: 'string' },
-  { id: 'industry', name: 'industry', displayName: 'Industry', table: 'contacts', type: 'string' },
-  { id: 'employee_count', name: 'employee_count', displayName: 'Employee Count', table: 'contacts', type: 'number' },
-  { id: 'revenue', name: 'revenue', displayName: 'Annual Revenue', table: 'contacts', type: 'number' },
-  { id: 'created_date', name: 'created_date', displayName: 'Created Date', table: 'contacts', type: 'date' },
-  { id: 'last_contact_date', name: 'last_contact_date', displayName: 'Last Contact Date', table: 'contacts', type: 'date' },
-  { id: 'is_active', name: 'is_active', displayName: 'Is Active', table: 'contacts', type: 'boolean' },
-  { id: 'customer_rating', name: 'customer_rating', displayName: 'Customer Rating', table: 'contacts', type: 'string' },
-  { id: 'lead_source', name: 'lead_source', displayName: 'Lead Source', table: 'leads', type: 'string' },
-  { id: 'lead_status', name: 'lead_status', displayName: 'Lead Status', table: 'leads', type: 'string' },
-  { id: 'lead_score', name: 'lead_score', displayName: 'Lead Score', table: 'leads', type: 'number' },
-  { id: 'lead_owner', name: 'lead_owner', displayName: 'Lead Owner', table: 'leads', type: 'string' },
-  { id: 'lead_stage', name: 'lead_stage', displayName: 'Lead Stage', table: 'leads', type: 'string' },
+  // Account fields from Account interface
+  { id: 'id', name: 'id', displayName: 'ID', table: 'accounts', type: 'string' },
+  { id: 'name', name: 'name', displayName: 'Name', table: 'accounts', type: 'string' },
+  { id: 'primarycontactid', name: 'primarycontactid', displayName: 'Primary Contact ID', table: 'accounts', type: 'string' },
+  { id: 'parentaccountid', name: 'parentaccountid', displayName: 'Parent Account ID', table: 'accounts', type: 'string' },
+  { id: 'address1_line1', name: 'address1_line1', displayName: 'Address Line 1', table: 'accounts', type: 'string' },
+  { id: 'address1_city', name: 'address1_city', displayName: 'City', table: 'accounts', type: 'string' },
+  { id: 'address1_stateorprovince', name: 'address1_stateorprovince', displayName: 'State or Province', table: 'accounts', type: 'string' },
+  { id: 'address1_postalcode', name: 'address1_postalcode', displayName: 'Postal Code', table: 'accounts', type: 'string' },
+  { id: 'address1_country', name: 'address1_country', displayName: 'Country', table: 'accounts', type: 'string' },
+  { id: 'telephone1', name: 'telephone1', displayName: 'Telephone', table: 'accounts', type: 'string' },
+  { id: 'websiteurl', name: 'websiteurl', displayName: 'Website URL', table: 'accounts', type: 'string' },
+  { id: 'industrycode', name: 'industrycode', displayName: 'Industry Code', table: 'accounts', type: 'string' },
+  { id: 'accountcategorycode', name: 'accountcategorycode', displayName: 'Account Category Code', table: 'accounts', type: 'string' },
+  { id: 'accountnumber', name: 'accountnumber', displayName: 'Account Number', table: 'accounts', type: 'string' },
+  { id: 'defaultpricelevelid', name: 'defaultpricelevelid', displayName: 'Default Price Level ID', table: 'accounts', type: 'string' },
+  { id: 'creditlimit', name: 'creditlimit', displayName: 'Credit Limit', table: 'accounts', type: 'number' },
+  { id: 'lastusedincampaign', name: 'lastusedincampaign', displayName: 'Last Used in Campaign', table: 'accounts', type: 'string' },
+  { id: 'createdAt', name: 'createdAt', displayName: 'Created At', table: 'accounts', type: 'date' },
+  { id: 'updatedAt', name: 'updatedAt', displayName: 'Updated At', table: 'accounts', type: 'date' },
 ];
 
+// Get field by display name
 export const getFieldByDisplayName = (displayName: string): CustomerField | undefined => {
   return customerFields.find(field => field.displayName === displayName);
 };
 
+// Get field by name
 export const getFieldByName = (name: string): CustomerField | undefined => {
   return customerFields.find(field => field.name === name);
+};
+
+// Get all account fields
+export const getAccountFields = (): CustomerField[] => {
+  return customerFields.filter(field => field.table === 'accounts');
 };

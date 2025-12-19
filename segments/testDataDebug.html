@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Data Debugger</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        .results {
+            white-space: pre-wrap;
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #2e7d32;
+        }
+        .error {
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Data Debugger</h1>
+        <button onclick="runDebug()">Run Debug Test</button>
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        // Storage utility functions (simplified version)
+        function getFromStorage(key, defaultValue) {
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : defaultValue;
+            } catch (error) {
+                console.error('Error reading from localStorage:', error);
+                return defaultValue;
+            }
+        }
+
+        function saveToStorage(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+            } catch (error) {
+                console.error('Error saving to localStorage:', error);
+            }
+        }
+
+        function addToStorage(key, newItem) {
+            try {
+                const currentData = getFromStorage(key, []);
+                const timestamp = new Date().toISOString();
+                const itemWithId = {
+                    ...newItem,
+                    id: `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    createdAt: timestamp,
+                    updatedAt: timestamp
+                };
+                const updatedData = [...currentData, itemWithId];
+                saveToStorage(key, updatedData);
+                return updatedData;
+            } catch (error) {
+                console.error('Error adding to localStorage:', error);
+                return getFromStorage(key, []);
+            }
+        }
+
+        // Simplified test data generator
+        function generateTestData() {
+            const ACCOUNT_STORAGE_KEY = 'accounts';
+            const CONTACT_STORAGE_KEY = 'contacts';
+            
+            // Clear existing data
+            saveToStorage(ACCOUNT_STORAGE_KEY, []);
+            saveToStorage(CONTACT_STORAGE_KEY, []);
+            
+            // Generate accounts
+            const accounts = [];
+            const companyNames = [
+                'Tech Innovations Inc.',
+                'Global Solutions Group',
+                'Digital Transformation Co.',
+                'Business Analytics Corp.',
+                'Cloud Services Unlimited'
+            ];
+            
+            for (let i = 0; i < companyNames.length; i++) {
+                const account = {
+                    name: companyNames[i],
+                    industrycode: 'Technology',
+                    accountcategorycode: 'Enterprise',
+                    accountnumber: `ACCT-${(i + 1).toString().padStart(5, '0')}`,
+                    telephone1: `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 10000)}`,
+                    websiteurl: `https://www.${companyNames[i].toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+                    address1_city: 'New York',
+                    address1_country: 'United States',
+                    creditlimit: Math.floor(Math.random() * 500000) + 50000
+                };
+                const updatedAccounts = addToStorage(ACCOUNT_STORAGE_KEY, account);
+                accounts.push(updatedAccounts[updatedAccounts.length - 1]);
+            }
+            
+            // Generate contacts
+            const contacts = [];
+            const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David'];
+            const lastNames = ['Smith', 'Johnson', 'Williams', 'Jones', 'Brown'];
+            
+            for (let i = 0; i < 10; i++) {
+                const accountIndex = i % accounts.length;
+                const accountId = accounts[accountIndex].id;
+                
+                const contact = {
+                    firstname: firstNames[i % firstNames.length],
+                    lastname: lastNames[i % lastNames.length],
+                    jobtitle: 'Engineer',
+                    parentcustomerid: accountId,
+                    department: 'IT',
+                    telephone1: `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 10000)}`,
+                    mobilephone: `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 10000)}`,
+                    emailaddress1: `${firstNames[i % firstNames.length].toLowerCase()}.${lastNames[i % lastNames.length].toLowerCase()}@example.com`,
+                    address1_line1: `${Math.floor(Math.random() * 1000)} Main St`
+                };
+                const updatedContacts = addToStorage(CONTACT_STORAGE_KEY, contact);
+                contacts.push(updatedContacts[updatedContacts.length - 1]);
+            }
+            
+            return { accounts, contacts };
+        }
+
+        function runDebug() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            function log(message, type = '') {
+                const div = document.createElement('div');
+                div.innerHTML = message;
+                if (type) {
+                    div.className = type;
+                }
+                resultsDiv.appendChild(div);
+            }
+            
+            log('Starting data debugging...');
+            
+            // Generate test data
+            const { accounts, contacts } = generateTestData();
+            
+            log(`Generated ${accounts.length} accounts and ${contacts.length} contacts`);
+            
+            // Check if accounts are properly generated
+            if (accounts.length > 0) {
+                log('<br>First few accounts:');
+                accounts.slice(0, 3).forEach((account, index) => {
+                    log(`${index + 1}. ID: ${account.id}, Name: ${account.name}`);
+                });
+            }
+            
+            // Check if contacts are properly generated with parentcustomerid
+            if (contacts.length > 0) {
+                log('<br>First few contacts:');
+                contacts.slice(0, 3).forEach((contact, index) => {
+                    log(`${index + 1}. ID: ${contact.id}, Name: ${contact.firstname} ${contact.lastname}, Parent Account ID: ${contact.parentcustomerid}`);
+                    // Check if the parent account exists
+                    const parentAccount = accounts.find(acc => acc.id === contact.parentcustomerid);
+                    log(`   Parent Account: ${parentAccount ? parentAccount.name : '<span class="error">NOT FOUND</span>'}`);
+                });
+            }
+            
+            // Check the association between accounts and contacts
+            log('<br>Checking contact-account associations:');
+            let validAssociations = 0;
+            let invalidAssociations = 0;
+            
+            contacts.forEach((contact) => {
+                const parentAccount = accounts.find(acc => acc.id === contact.parentcustomerid);
+                if (parentAccount) {
+                    validAssociations++;
+                } else {
+                    invalidAssociations++;
+                }
+            });
+            
+            log(`Valid associations: <span class="success">${validAssociations}</span>`);
+            log(`Invalid associations: <span class="error">${invalidAssociations}</span>`);
+            log(`Total contacts: ${contacts.length}`);
+            
+            // Check localStorage directly
+            const ACCOUNT_STORAGE_KEY = 'accounts';
+            const CONTACT_STORAGE_KEY = 'contacts';
+            
+            const storedAccounts = getFromStorage(ACCOUNT_STORAGE_KEY, []);
+            const storedContacts = getFromStorage(CONTACT_STORAGE_KEY, []);
+            
+            log('<br>Data in localStorage:');
+            log(`Accounts in storage: ${storedAccounts.length}`);
+            log(`Contacts in storage: ${storedContacts.length}`);
+        }
+    </script>
+</body>
+</html>

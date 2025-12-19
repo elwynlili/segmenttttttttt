@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SegmentsOverview from './components/SegmentsOverview';
 import SegmentBuilder from './components/SegmentBuilder';
+import AccountContactManagement from './components/AccountContactManagement';
 import './App.css';
 
 function App() {
@@ -10,6 +11,7 @@ function App() {
         <Routes>
           <Route path="/" element={<SegmentsOverview />} />
           <Route path="/builder" element={<SegmentBuilder />} />
+          <Route path="/accounts-contacts" element={<AccountContactManagement />} />
         </Routes>
       </Router>
     </div>

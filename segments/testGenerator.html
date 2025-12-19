@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Data Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Data Generator</h1>
+        <p>This page tests the test data generation logic.</p>
+        <button onclick="generateData()">Generate Test Data</button>
+        <div class="result">
+            <h2>Generated Data:</h2>
+            <pre id="output"></pre>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the data generation functions
+        import { ensureTestDataExists } from './src/utils/testDataGenerator.ts';
+
+        async function generateData() {
+            const output = document.getElementById('output');
+            output.textContent = 'Generating data...';
+
+            try {
+                // Call the data generation function
+                ensureTestDataExists();
+
+                // Wait a moment for generation to complete
+                setTimeout(() => {
+                    // Read the generated data from localStorage
+                    const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+                    const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+
+                    let result = `Generated ${accounts.length} accounts\n`;
+                    result += `Generated ${contacts.length} contacts\n\n`;
+                    
+                    if (accounts.length > 0) {
+                        result += 'First 5 accounts:\n';
+                        result += JSON.stringify(accounts.slice(0, 5), null, 2);
+                        result += '\n\n';
+                    }
+
+                    if (contacts.length > 0) {
+                        result += 'First 5 contacts:\n';
+                        result += JSON.stringify(contacts.slice(0, 5), null, 2);
+                    }
+
+                    output.textContent = result;
+                }, 1000);
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

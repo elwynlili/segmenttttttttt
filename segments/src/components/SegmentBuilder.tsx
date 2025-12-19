@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -15,7 +15,14 @@ import {
   Tooltip,
   Chip,
   Select,
-  MenuItem
+  MenuItem,
+  Snackbar,
+  Alert,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -24,80 +31,92 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { customerFields } from '../mock/customerFields';
-
-// Define interfaces for type safety
-interface Condition {
-  id: string;
-  attribute: string;
-  operator: string;
-  value: string | number | boolean;
-}
-
-interface Group {
-  id: string;
-  type: 'attribute' | 'behavior' | 'existing';
-  logicalOperator: 'and' | 'or';
-  conditions: Condition[];
-  subgroups: Group[];
-  memberType?: 'only_matches' | 'between_both'; // For subgroup relationships
-}
+import { getAccountFields } from '../mock/customerFields';
+import type { Group, Condition, Segment } from '../types/segment';
+import { getFromStorage, saveToStorage } from '../utils/storage';
 
 
-
-// Helper function to recursively find a group by ID
-const findGroupById = (groups: Group[], id: string): Group | undefined => {
-  for (const group of groups) {
-    if (group.id === id) return group;
-    const foundInSubgroup = findGroupById(group.subgroups, id);
-    if (foundInSubgroup) return foundInSubgroup;
-  }
-  return undefined;
-};
-
-// Helper function to recursively update a group by ID
-const updateGroupById = (groups: Group[], id: string, updateFn: (group: Group) => Group): Group[] => {
-  return groups.map(group => {
-    if (group.id === id) {
-      return updateFn(group);
-    }
-    return {
-      ...group,
-      subgroups: updateGroupById(group.subgroups, id, updateFn)
-    };
-  });
-};
-
-// Helper function to recursively delete a group by ID
-const deleteGroupById = (groups: Group[], id: string): Group[] => {
-  return groups
-    .filter(group => group.id !== id)
-    .map(group => ({
-      ...group,
-      subgroups: deleteGroupById(group.subgroups, id)
-    }));
-};
 
 const SegmentBuilder: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(0);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
+  
+  // Storage key for segments
+  const SEGMENT_STORAGE_KEY = 'segments';
   
   // Get segment data from location state
   const segmentData = location.state?.segmentData;
+  // Determine editability based on location state or segment status
+  const isEditable = location.state?.isEditable || segmentData?.status === 'Draft' || false;
+  
+  const [activeTab, setActiveTab] = useState(0);
+  const [groups, setGroups] = useState<Group[]>(segmentData?.groups || []);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
+  const [segmentName, setSegmentName] = useState<string>(segmentData?.name || '');
+  const [description, setDescription] = useState<string>(segmentData?.description || '');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' });
+  const [loading, setLoading] = useState(false); // Prevent multiple clicks
+  
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    type: 'group' as 'group' | 'condition',
+    id: '',
+    groupId: ''
+  });
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+  // Helper function to recursively find a group by ID
+  const findGroupById = useMemo(() => {
+    const recursiveFind = (searchGroups: Group[], id: string): Group | undefined => {
+      for (const group of searchGroups) {
+        if (group.id === id) return group;
+        const foundInSubgroup = recursiveFind(group.subgroups, id);
+        if (foundInSubgroup) return foundInSubgroup;
+      }
+      return undefined;
+    };
+    return recursiveFind;
+  }, []);
+
+  // Helper function to recursively update a group by ID
+  const updateGroupById = useCallback((searchGroups: Group[], id: string, updateFn: (group: Group) => Group): Group[] => {
+    const recursiveUpdate = (groups: Group[]): Group[] => {
+      return groups.map(group => {
+        if (group.id === id) {
+          return updateFn(group);
+        }
+        return {
+          ...group,
+          subgroups: recursiveUpdate(group.subgroups)
+        };
+      });
+    };
+    return recursiveUpdate(searchGroups);
+  }, []);
+
+  // Helper function to recursively delete a group by ID
+  const deleteGroupById = useCallback((searchGroups: Group[], id: string): Group[] => {
+    const recursiveDelete = (groups: Group[]): Group[] => {
+      return groups
+        .filter(group => group.id !== id)
+        .map(group => ({
+          ...group,
+          subgroups: recursiveDelete(group.subgroups)
+        }));
+    };
+    return recursiveDelete(searchGroups);
+  }, []);
+
+  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-  };
+  }, []);
 
-  const handleAddGroup = () => {
-    setGroupDropdownOpen(!groupDropdownOpen);
-  };
+  const handleAddGroup = useCallback(() => {
+    setGroupDropdownOpen(prev => !prev);
+  }, []);
 
-  const handleSelectGroupType = (type: 'attribute' | 'behavior' | 'existing') => {
+  const handleSelectGroupType = useCallback((type: 'attribute' | 'behavior' | 'existing') => {
     // Logic to add new group based on type
     const newGroup: Group = {
       id: `group-${Date.now()}`,
@@ -106,31 +125,72 @@ const SegmentBuilder: React.FC = () => {
       conditions: [],
       subgroups: []
     };
-    setGroups([...groups, newGroup]);
+    setGroups(prev => [...prev, newGroup]);
     setGroupDropdownOpen(false);
     setSelectedGroupId(newGroup.id); // Auto-select the new group
-  };
+  }, []);
 
-  const handleDeleteGroup = (groupId: string) => {
-    // Logic to delete a group (including subgroups)
-    setGroups(deleteGroupById(groups, groupId));
-    if (selectedGroupId === groupId) {
-      setSelectedGroupId(null);
+  // Delete group handler with confirmation
+  const handleDeleteGroup = useCallback((groupId: string) => {
+    setDeleteDialog({
+      open: true,
+      type: 'group',
+      id: groupId,
+      groupId: ''
+    });
+  }, []);
+
+  // Confirm delete group
+  const confirmDeleteGroup = useCallback(() => {
+    if (deleteDialog.id) {
+      setGroups(prev => deleteGroupById(prev, deleteDialog.id));
+      if (selectedGroupId === deleteDialog.id) {
+        setSelectedGroupId(null);
+      }
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Group deleted successfully',
+        severity: 'success'
+      });
     }
-  };
+    setDeleteDialog(prev => ({ ...prev, open: false }));
+  }, [deleteDialog.id, selectedGroupId, deleteGroupById]);
 
-  const handleGroupSelect = (groupId: string) => {
+  const handleGroupSelect = useCallback((groupId: string) => {
     // Logic to select a group
-    setSelectedGroupId(groupId === selectedGroupId ? null : groupId);
-  };
+    setSelectedGroupId(prev => prev === groupId ? null : groupId);
+  }, []);
 
-  const handleAddCondition = (groupId: string) => {
-    // Logic to add a new condition to a group (including subgroups)
+  // Helper function to update a specific condition
+  const updateCondition = useCallback((groupId: string, conditionId: string, updateFn: (condition: Condition) => Condition) => {
+    const updatedGroups = updateGroupById(groups, groupId, group => ({
+      ...group,
+      conditions: group.conditions.map(condition => 
+        condition.id === conditionId ? updateFn(condition) : condition
+      )
+    }));
+    setGroups(updatedGroups);
+  }, [groups, updateGroupById]);
+
+  // Generic condition property update function
+  const updateConditionProperty = useCallback((
+    groupId: string,
+    conditionId: string,
+    property: keyof Condition,
+    value: Condition[keyof Condition]
+  ) => {
+    updateCondition(groupId, conditionId, (condition) => ({
+      ...condition,
+      [property]: value
+    }));
+  }, [updateCondition]);
+
+  // Helper function to add a new condition to a group
+  const addConditionToGroup = useCallback((groupId: string, condition: Omit<Condition, 'id'>) => {
     const newCondition: Condition = {
-      id: `condition-${Date.now()}`,
-      attribute: customerFields[0].displayName, // Use first field as default
-      operator: '=',
-      value: ''
+      ...condition,
+      id: `condition-${Date.now()}`
     };
     
     const updatedGroups = updateGroupById(groups, groupId, group => ({
@@ -138,18 +198,47 @@ const SegmentBuilder: React.FC = () => {
       conditions: [...group.conditions, newCondition]
     }));
     setGroups(updatedGroups);
-  };
+  }, [groups, updateGroupById]);
 
-  const handleDeleteCondition = (groupId: string, conditionId: string) => {
-    // Logic to delete a condition from a group (including subgroups)
-    const updatedGroups = updateGroupById(groups, groupId, group => ({
-      ...group,
-      conditions: group.conditions.filter(condition => condition.id !== conditionId)
-    }));
-    setGroups(updatedGroups);
-  };
+  const handleAddCondition = useCallback((groupId: string) => {
+    // Logic to add a new condition to a group (including subgroups)
+    const accountFields = getAccountFields();
+    addConditionToGroup(groupId, {
+      attribute: accountFields[0]?.name || '', // Use first account field as default
+      operator: '=',
+      value: ''
+    });
+  }, [addConditionToGroup]);
 
-  const handleAddSubgroup = (groupId: string) => {
+  // Delete condition handler with confirmation
+  const handleDeleteCondition = useCallback((groupId: string, conditionId: string) => {
+    setDeleteDialog({
+      open: true,
+      type: 'condition',
+      id: conditionId,
+      groupId: groupId
+    });
+  }, []);
+
+  // Confirm delete condition
+  const confirmDeleteCondition = useCallback(() => {
+    if (deleteDialog.id && deleteDialog.groupId) {
+      const updatedGroups = updateGroupById(groups, deleteDialog.groupId, group => ({
+        ...group,
+        conditions: group.conditions.filter(condition => condition.id !== deleteDialog.id)
+      }));
+      setGroups(updatedGroups);
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Condition deleted successfully',
+        severity: 'success'
+      });
+    }
+    setDeleteDialog(prev => ({ ...prev, open: false }));
+  }, [deleteDialog.id, deleteDialog.groupId, groups, updateGroupById]);
+
+  const handleAddSubgroup = useCallback((groupId: string) => {
     // Logic to add a new subgroup to a group (including subgroups)
     const newSubgroup: Group = {
       id: `group-${Date.now()}-sub`,
@@ -164,23 +253,198 @@ const SegmentBuilder: React.FC = () => {
       subgroups: [...group.subgroups, newSubgroup]
     }));
     setGroups(updatedGroups);
-  };
+  }, [groups, updateGroupById]);
 
-  const handleAddConditionWithAttribute = (groupId: string, attribute: string, value: string) => {
+  const handleAddConditionWithAttribute = useCallback((groupId: string, attribute: string, value: string) => {
     // Logic to add a new condition with pre-filled attribute and value
-    const newCondition: Condition = {
-      id: `condition-${Date.now()}`,
+    addConditionToGroup(groupId, {
       attribute,
       operator: '=',
       value
-    };
+    });
     
-    const updatedGroups = updateGroupById(groups, groupId, group => ({
-      ...group,
-      conditions: [...group.conditions, newCondition]
-    }));
-    setGroups(updatedGroups);
-  };
+    // Show success message
+    setSnackbar({
+      open: true,
+      message: 'Condition added successfully',
+      severity: 'success'
+    });
+  }, [addConditionToGroup]);
+
+  // Snackbar close handler
+  const handleSnackbarClose = useCallback(() => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  }, []);
+
+  // Save segment as draft
+  const handleSaveDraft = useCallback(() => {
+    if (loading || !segmentName.trim()) {
+      if (!segmentName.trim()) {
+        setSnackbar({
+          open: true,
+          message: 'Segment name is required',
+          severity: 'error'
+        });
+      }
+      return;
+    }
+    setLoading(true);
+
+    const segments = getFromStorage<Segment>(SEGMENT_STORAGE_KEY, []);
+    const timestamp = new Date().toISOString();
+    const localSegmentData: Omit<Segment, 'id' | 'createdAt'> = {
+      name: segmentName,
+      description,
+      groups,
+      source: segmentData?.source || 'Contacts',
+      lastUpdate: timestamp,
+      statusReason: 'Draft',
+      createdBy: segmentData?.createdBy || 'Current User',
+      membersCount: 0,
+      type: segmentData?.type || 'Dynamic',
+      status: 'Draft',
+      audience: segmentData?.audience || 'contact'
+    };
+
+    let updatedSegments;
+    if (segmentData?.id) {
+      // Update existing segment
+      updatedSegments = segments.map(segment => {
+        if (segment.id === segmentData.id) {
+          return {
+            ...segment,
+            ...localSegmentData,
+            lastUpdate: timestamp
+          };
+        }
+        return segment;
+      });
+    } else {
+      // Check if segment name already exists
+      const isNameExists = segments.some(segment => segment.name.trim().toLowerCase() === segmentName.trim().toLowerCase());
+      if (isNameExists) {
+        setSnackbar({
+          open: true,
+          message: 'A segment with this name already exists',
+          severity: 'error'
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // Create new segment
+      const newSegment: Segment = {
+        ...localSegmentData,
+        id: `segment-${Date.now()}`,
+        createdAt: timestamp
+      };
+      updatedSegments = [...segments, newSegment];
+    }
+
+    saveToStorage(SEGMENT_STORAGE_KEY, updatedSegments);
+    
+    setSnackbar({
+      open: true,
+      message: 'Segment saved as draft successfully',
+      severity: 'success'
+    });
+
+    // Navigate back to overview after saving
+    setTimeout(() => {
+      navigate('/');
+      setLoading(false);
+    }, 1500);
+  }, [segmentName, description, groups, segmentData, navigate, loading]);
+
+  // Save and activate segment
+  const handleSaveActivate = useCallback(() => {
+    if (loading || !segmentName.trim()) {
+      if (!segmentName.trim()) {
+        setSnackbar({
+          open: true,
+          message: 'Segment name is required',
+          severity: 'error'
+        });
+      }
+      return;
+    }
+
+    if (groups.length === 0) {
+      setSnackbar({
+        open: true,
+        message: 'At least one group is required',
+        severity: 'error'
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    const segments = getFromStorage<Segment>(SEGMENT_STORAGE_KEY, []);
+    const timestamp = new Date().toISOString();
+    const localSegmentData: Omit<Segment, 'id' | 'createdAt'> = {
+      name: segmentName,
+      description,
+      groups,
+      source: segmentData?.source || 'Contacts',
+      lastUpdate: timestamp,
+      statusReason: 'Ready to use',
+      createdBy: segmentData?.createdBy || 'Current User',
+      membersCount: 0,
+      type: segmentData?.type || 'Dynamic',
+      status: 'Ready to use',
+      audience: segmentData?.audience || 'contact'
+    };
+
+    let updatedSegments;
+    if (segmentData?.id) {
+      // Update existing segment
+      updatedSegments = segments.map(segment => {
+        if (segment.id === segmentData.id) {
+          return {
+            ...segment,
+            ...localSegmentData,
+            lastUpdate: timestamp
+          };
+        }
+        return segment;
+      });
+    } else {
+      // Check if segment name already exists
+      const isNameExists = segments.some(segment => segment.name.trim().toLowerCase() === segmentName.trim().toLowerCase());
+      if (isNameExists) {
+        setSnackbar({
+          open: true,
+          message: 'A segment with this name already exists',
+          severity: 'error'
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // Create new segment
+      const newSegment: Segment = {
+        ...localSegmentData,
+        id: `segment-${Date.now()}`,
+        createdAt: timestamp
+      };
+      updatedSegments = [...segments, newSegment];
+    }
+
+    saveToStorage(SEGMENT_STORAGE_KEY, updatedSegments);
+    
+    setSnackbar({
+      open: true,
+      message: 'Segment saved and activated successfully',
+      severity: 'success'
+    });
+
+    // Navigate back to overview after saving
+    setTimeout(() => {
+      navigate('/');
+      setLoading(false);
+    }, 1500);
+  }, [segmentName, description, groups, segmentData, navigate, loading]);
 
   const handleBack = () => {
     navigate('/');
@@ -207,8 +471,12 @@ const SegmentBuilder: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined">Save as draft</Button>
-          <Button variant="contained" color="primary">Save & activate</Button>
+          {isEditable && (
+            <>
+              <Button variant="outlined" onClick={handleSaveDraft} disabled={loading} loading={loading}>Save as draft</Button>
+              <Button variant="contained" color="primary" onClick={handleSaveActivate} disabled={loading} loading={loading}>Save & activate</Button>
+            </>
+          )}
         </Box>
       </Box>
 
@@ -229,10 +497,11 @@ const SegmentBuilder: React.FC = () => {
             <TextField
               fullWidth
               label="Segment name"
-              value={segmentData?.name || ''}
+              value={segmentName}
               variant="outlined"
               sx={{ mb: 2 }}
-              InputProps={{ readOnly: true }}
+              onChange={(e) => setSegmentName(e.target.value)}
+              helperText={segmentName.trim() ? '' : 'Segment name is required'}
             />
             <TextField
               fullWidth
@@ -241,6 +510,8 @@ const SegmentBuilder: React.FC = () => {
               rows={2}
               variant="outlined"
               placeholder="Add a description to help identify this segment"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </Paper>
 
@@ -282,15 +553,17 @@ const SegmentBuilder: React.FC = () => {
                 <Typography variant="h6" sx={{ mb: 4, color: 'text.secondary' }}>
                   Add elements to build your segment
                 </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddGroup}
-                  endIcon={<ExpandMoreIcon />}
-                  sx={{ mt: 2, px: 4, py: 1 }}
-                >
-                  + Add a new group
-                </Button>
+                {isEditable && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddGroup}
+                    endIcon={<ExpandMoreIcon />}
+                    sx={{ mt: 2, px: 4, py: 1 }}
+                  >
+                    + Add a new group
+                  </Button>
+                )}
               </Box>
             ) : (
               <Box sx={{ width: '100%' }}>
@@ -312,13 +585,20 @@ const SegmentBuilder: React.FC = () => {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="h6">
                         {group.type === 'attribute' ? 'Attribute Group' : 
-                         group.type === 'behavior' ? 'Behavior Group' : 'Existing Segment'}
+                         group.type === 'behavior' ? 'Behavior Group' : 'Existing Segment'} 
+                        <Chip 
+                          label={group.logicalOperator.toUpperCase()} 
+                          size="small" 
+                          sx={{ ml: 2, bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 600 }}
+                        />
                       </Typography>
-                      <Tooltip title="Delete group">
-                        <IconButton color="error" size="small" onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
+                      {isEditable && (
+                        <Tooltip title="Delete group">
+                          <IconButton color="error" size="small" onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </Box>
                     {/* Group content */}
                     <Box sx={{ mt: 2 }}>
@@ -345,39 +625,45 @@ const SegmentBuilder: React.FC = () => {
                               size="small" 
                               sx={{ bgcolor: '#e8f5e9', color: '#2e7d32' }}
                             />
-                            <IconButton 
-                              size="small" 
-                              color="error" 
-                              sx={{ ml: 'auto' }}
-                              onClick={(e) => { e.stopPropagation(); handleDeleteCondition(group.id, condition.id); }}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
+                            {isEditable && (
+                              <IconButton 
+                                size="small" 
+                                color="error" 
+                                sx={{ ml: 'auto' }}
+                                onClick={(e) => { e.stopPropagation(); handleDeleteCondition(group.id, condition.id); }}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            )}
                           </Box>
                         </Box>
                       ))}
                         </Box>
                       )}
                       {/* Add condition button */}
-                      <Button 
-                        variant="outlined" 
-                        size="small" 
-                        startIcon={<AddIcon />}
-                        onClick={(e) => { e.stopPropagation(); handleAddCondition(group.id); }}
-                        sx={{ mr: 1 }}
-                      >
-                        Add condition
-                      </Button>
-                       
+                      {isEditable && (
+                        <Button 
+                          variant="outlined" 
+                          size="small" 
+                          startIcon={<AddIcon />}
+                          onClick={(e) => { e.stopPropagation(); handleAddCondition(group.id); }}
+                          sx={{ mr: 1 }}
+                        >
+                          Add condition
+                        </Button>
+                      )}
+                        
                       {/* Add subgroup button */}
-                      <Button 
-                        variant="outlined" 
-                        size="small" 
-                        startIcon={<AddIcon />}
-                        onClick={(e) => { e.stopPropagation(); handleAddSubgroup(group.id); }}
-                      >
-                        Add subgroup
-                      </Button>
+                      {isEditable && (
+                        <Button 
+                          variant="outlined" 
+                          size="small" 
+                          startIcon={<AddIcon />}
+                          onClick={(e) => { e.stopPropagation(); handleAddSubgroup(group.id); }}
+                        >
+                          Add subgroup
+                        </Button>
+                      )}
                        
                       {/* Subgroups */}
                       {group.subgroups.length > 0 && (
@@ -403,13 +689,20 @@ const SegmentBuilder: React.FC = () => {
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                 <Typography variant="subtitle2">
                                   {subgroup.type === 'attribute' ? 'Attribute Subgroup' : 
-                                   subgroup.type === 'behavior' ? 'Behavior Subgroup' : 'Existing Segment Subgroup'}
+                                   subgroup.type === 'behavior' ? 'Behavior Subgroup' : 'Existing Segment Subgroup'} 
+                                  <Chip 
+                                    label={subgroup.logicalOperator.toUpperCase()} 
+                                    size="small" 
+                                    sx={{ ml: 2, bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 600, fontSize: '0.7rem' }}
+                                  />
                                 </Typography>
-                                <Tooltip title="Delete subgroup">
-                                  <IconButton color="error" size="small" onClick={(e) => { e.stopPropagation(); handleDeleteGroup(subgroup.id); }}>
-                                    <DeleteIcon />
-                                  </IconButton>
-                                </Tooltip>
+                                {isEditable && (
+                                  <Tooltip title="Delete subgroup">
+                                    <IconButton color="error" size="small" onClick={(e) => { e.stopPropagation(); handleDeleteGroup(subgroup.id); }}>
+                                      <DeleteIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
                               </Box>
                               
                               {/* Subgroup conditions */}
@@ -429,6 +722,7 @@ const SegmentBuilder: React.FC = () => {
                                           size="small" 
                                           sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontSize: '0.7rem' }}
                                         />
+                                        {isEditable && (
                                         <IconButton 
                                           size="small" 
                                           color="error" 
@@ -437,6 +731,7 @@ const SegmentBuilder: React.FC = () => {
                                         >
                                           <DeleteIcon fontSize="small" />
                                         </IconButton>
+                                      )}
                                       </Box>
                                     </Box>
                                   ))}
@@ -454,13 +749,15 @@ const SegmentBuilder: React.FC = () => {
                   </Paper>
                 ))}
                 <Box sx={{ textAlign: 'center', mt: 3 }}>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={handleAddGroup}
-                  >
-                    + Add a new group
-                  </Button>
+                  {isEditable && (
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={handleAddGroup}
+                    >
+                      + Add a new group
+                    </Button>
+                  )}
                 </Box>
               </Box>
             )}
@@ -547,7 +844,7 @@ const SegmentBuilder: React.FC = () => {
                 </Typography>
                 <TextField
                   fullWidth
-                  value={groups.find(g => g.id === selectedGroupId)?.type || ''}
+                  value={findGroupById(groups, selectedGroupId ?? '')?.type || ''}
                   variant="outlined"
                   size="small"
                   InputProps={{ readOnly: true }}
@@ -561,28 +858,34 @@ const SegmentBuilder: React.FC = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <Button
-                    variant={findGroupById(groups, selectedGroupId!)?.logicalOperator === 'and' ? 'contained' : 'outlined'}
+                    variant={findGroupById(groups, selectedGroupId ?? '')?.logicalOperator === 'and' ? 'contained' : 'outlined'}
                     size="small"
-                    onClick={() => {
-                      const updatedGroups = updateGroupById(groups, selectedGroupId!, group => ({
-                        ...group,
-                        logicalOperator: 'and'
-                      }));
-                      setGroups(updatedGroups);
-                    }}
+                    onClick={isEditable ? () => {
+                      if (selectedGroupId) {
+                        const updatedGroups = updateGroupById(groups, selectedGroupId, group => ({
+                          ...group,
+                          logicalOperator: 'and'
+                        }));
+                        setGroups(updatedGroups);
+                      }
+                    } : undefined}
+                    disabled={!isEditable}
                   >
                     AND
                   </Button>
                   <Button
-                    variant={findGroupById(groups, selectedGroupId!)?.logicalOperator === 'or' ? 'contained' : 'outlined'}
+                    variant={findGroupById(groups, selectedGroupId ?? '')?.logicalOperator === 'or' ? 'contained' : 'outlined'}
                     size="small"
-                    onClick={() => {
-                      const updatedGroups = updateGroupById(groups, selectedGroupId!, group => ({
-                        ...group,
-                        logicalOperator: 'or'
-                      }));
-                      setGroups(updatedGroups);
-                    }}
+                    onClick={isEditable ? () => {
+                      if (selectedGroupId) {
+                        const updatedGroups = updateGroupById(groups, selectedGroupId, group => ({
+                          ...group,
+                          logicalOperator: 'or'
+                        }));
+                        setGroups(updatedGroups);
+                      }
+                    } : undefined}
+                    disabled={!isEditable}
                   >
                     OR
                   </Button>
@@ -594,7 +897,7 @@ const SegmentBuilder: React.FC = () => {
                 Conditions
               </Typography>
               
-              {findGroupById(groups, selectedGroupId!)?.conditions.map((condition) => (
+              {selectedGroupId && findGroupById(groups, selectedGroupId)?.conditions.map((condition) => (
                 <Box key={condition.id} sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
                   <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
                     Condition {condition.id.split('-')[1]}
@@ -610,21 +913,14 @@ const SegmentBuilder: React.FC = () => {
                       value={condition.attribute}
                       variant="outlined"
                       size="small"
-                      onChange={(e) => {
-                        // Update condition attribute using recursive function
-                        const updatedGroups = updateGroupById(groups, selectedGroupId!, group => ({
-                          ...group,
-                          conditions: group.conditions.map(cond => 
-                            cond.id === condition.id 
-                              ? { ...cond, attribute: e.target.value } 
-                              : cond
-                          )
-                        }));
-                        setGroups(updatedGroups);
-                      }}
+                      onChange={isEditable ? (e) => {
+                        // Update condition attribute using generic function
+                        updateConditionProperty(selectedGroupId, condition.id, 'attribute', e.target.value);
+                      } : undefined}
+                      disabled={!isEditable}
                     >
-                      {customerFields.map(field => (
-                        <MenuItem key={field.id} value={field.displayName}>
+                      {getAccountFields().map(field => (
+                        <MenuItem key={field.id} value={field.name}>
                           {field.displayName}
                         </MenuItem>
                       ))}
@@ -641,18 +937,11 @@ const SegmentBuilder: React.FC = () => {
                       value={condition.operator}
                       variant="outlined"
                       size="small"
-                      onChange={(e) => {
-                        // Update condition operator using recursive function
-                        const updatedGroups = updateGroupById(groups, selectedGroupId!, group => ({
-                          ...group,
-                          conditions: group.conditions.map(cond => 
-                            cond.id === condition.id 
-                              ? { ...cond, operator: e.target.value } 
-                              : cond
-                          )
-                        }));
-                        setGroups(updatedGroups);
-                      }}
+                      onChange={isEditable ? (e) => {
+                        // Update condition operator using generic function
+                        updateConditionProperty(selectedGroupId, condition.id, 'operator', e.target.value);
+                      } : undefined}
+                      disabled={!isEditable}
                     >
                       <MenuItem value="=">=</MenuItem>
                       <MenuItem value=">">{'>'}</MenuItem>
@@ -679,54 +968,53 @@ const SegmentBuilder: React.FC = () => {
                       value={condition.value}
                       variant="outlined"
                       size="small"
-                      onChange={(e) => {
-                        // Update condition value using recursive function
-                        const updatedGroups = updateGroupById(groups, selectedGroupId!, group => ({
-                          ...group,
-                          conditions: group.conditions.map(cond => 
-                            cond.id === condition.id 
-                              ? { ...cond, value: e.target.value } 
-                              : cond
-                          )
-                        }));
-                        setGroups(updatedGroups);
-                      }}
+                      onChange={isEditable ? (e) => {
+                        // Update condition value using generic function
+                        updateConditionProperty(selectedGroupId, condition.id, 'value', e.target.value);
+                      } : undefined}
+                      disabled={!isEditable}
                     />
                   </Box>
                   
                   {/* Delete Condition Button */}
-                  <Button
-                    variant="text"
-                    color="error"
-                    size="small"
-                    onClick={() => handleDeleteCondition(selectedGroupId!, condition.id)}
-                  >
-                    Delete Condition
-                  </Button>
+                  {isEditable && (
+                    <Button
+                      variant="text"
+                      color="error"
+                      size="small"
+                      onClick={() => handleDeleteCondition(selectedGroupId, condition.id)}
+                    >
+                      Delete Condition
+                    </Button>
+                  )}
                 </Box>
               ))}
               
               {/* Add Condition Button */}
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={() => handleAddCondition(selectedGroupId!)}
-                sx={{ mt: 2, mr: 1 }}
-              >
-                Add New Condition
-              </Button>
+              {isEditable && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => selectedGroupId && handleAddCondition(selectedGroupId)}
+                  sx={{ mt: 2, mr: 1 }}
+                >
+                  Add New Condition
+                </Button>
+              )}
               
               {/* Add Subgroup Button */}
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={() => handleAddSubgroup(selectedGroupId!)}
-                sx={{ mt: 2 }}
-              >
-                Add Subgroup
-              </Button>
+              {isEditable && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => selectedGroupId && handleAddSubgroup(selectedGroupId)}
+                  sx={{ mt: 2 }}
+                >
+                  Add Subgroup
+                </Button>
+              )}
             </Box>
           ) : (
             // Default elements content when no group is selected
@@ -838,13 +1126,13 @@ const SegmentBuilder: React.FC = () => {
                 <Divider sx={{ mb: 2 }} />
                 
                 <Button
-                  variant="text"
-                  color="primary"
-                  startIcon={<AddIcon />}
-                  sx={{ mt: 2 }}
-                >
-                  + Add table
-                </Button>
+                    variant="text"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    sx={{ mt: 2 }}
+                  >
+                    + Add table
+                  </Button>
               </Box>
             )}
 
@@ -956,6 +1244,54 @@ const SegmentBuilder: React.FC = () => {
                     >
                       Clicked
                     </Typography>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+              open={deleteDialog.open}
+              onClose={() => setDeleteDialog(prev => ({ ...prev, open: false }))}
+            >
+              <DialogTitle>
+                {deleteDialog.type === 'group' ? 'Delete Group' : 'Delete Condition'}
+              </DialogTitle>
+              <DialogContent>
+                <DialogContentText>
+                  {deleteDialog.type === 'group' 
+                    ? 'Are you sure you want to delete this group? All subgroups and conditions will also be deleted.' 
+                    : 'Are you sure you want to delete this condition?'}
+                </DialogContentText>
+              </DialogContent>
+              <DialogActions>
+                <Button 
+                  onClick={() => setDeleteDialog(prev => ({ ...prev, open: false }))}
+                  variant="outlined"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={deleteDialog.type === 'group' ? confirmDeleteGroup : confirmDeleteCondition}
+                  variant="contained"
+                  color="error"
+                >
+                  Delete
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Snackbar for user feedback */}
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={6000}
+              onClose={handleSnackbarClose}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+              <Alert 
+                onClose={handleSnackbarClose} 
+                severity={snackbar.severity} 
+                sx={{ width: '100%' }}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
                     <Typography 
                       variant="body2" 
                       sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}

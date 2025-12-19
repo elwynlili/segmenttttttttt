@@ -10,6 +10,24 @@ export interface Segment {
   type: 'Dynamic' | 'Static';
   status: 'Draft' | 'Ready to use' | 'Getting ready';
   audience: 'contact' | 'leads';
+  description?: string;
+  groups: Group[];
+}
+
+export interface Group {
+  id: string;
+  type: 'attribute' | 'behavior' | 'existing';
+  logicalOperator: 'and' | 'or';
+  conditions: Condition[];
+  subgroups: Group[];
+  memberType?: 'only_matches' | 'between_both';
+}
+
+export interface Condition {
+  id: string;
+  attribute: string;
+  operator: string;
+  value: string | number | boolean;
 }
 
 export interface SegmentFilter {

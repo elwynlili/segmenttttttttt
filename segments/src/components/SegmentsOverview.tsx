@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -23,18 +23,36 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
+import TableChartIcon from '@mui/icons-material/TableChart';
 import type { Segment, SegmentFilter, NewSegmentFormData } from '../types/segment';
 import { mockSegments } from '../mock/segments';
 import NewSegmentDialog from './NewSegmentDialog';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { getFromStorage } from '../utils/storage';
 
 const SegmentsOverview: React.FC = () => {
   const navigate = useNavigate();
-  const [segments, setSegments] = useState<Segment[]>(mockSegments);
+  const location = useLocation();
+  const [segments, setSegments] = useState<Segment[]>([]);
   const [filter, setFilter] = useState<SegmentFilter>({
     searchTerm: ''
   });
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Storage key for segments
+  const SEGMENT_STORAGE_KEY = 'segments';
+
+  // Load segments from localStorage when component mounts or when location changes (navigating back from builder)
+  useEffect(() => {
+    // Load segments from storage
+    const loadSegments = () => {
+      const loadedSegments = getFromStorage<Segment>(SEGMENT_STORAGE_KEY, mockSegments);
+      setSegments(loadedSegments);
+    };
+    
+    // Call the function to load segments
+    loadSegments();
+  }, [location.key]);
 
   // Calculate filtered segments directly instead of using state
   const filteredSegments = segments.filter(segment => {
@@ -64,34 +82,34 @@ const SegmentsOverview: React.FC = () => {
     setDialogOpen(false);
   };
 
-  const handleCreateSegment = (formData: NewSegmentFormData) => {
-    // Create new segment with mock data
-    const newSegment: Segment = {
-      id: `segment-${Date.now()}`,
-      name: formData.name,
-      source: formData.audience === 'contact' ? 'Contacts' : 'Leads',
-      lastUpdate: new Date().toLocaleString(),
-      createdAt: new Date().toLocaleString(),
-      statusReason: 'Draft',
-      createdBy: 'Current User',
-      membersCount: 0,
-      type: 'Dynamic',
-      status: 'Draft',
-      audience: formData.audience
-    };
-    
-    // Add new segment to the list
-    setSegments(prev => [...prev, newSegment]);
-    
-    console.log('New segment created:', newSegment);
-    
+  const handleSegmentClick = (segment: Segment) => {
     // Navigate to SegmentBuilder with segment data
     navigate('/builder', { 
       state: { 
-        segmentData: { 
+        segmentData: segment,
+        isEditable: segment.status === 'Draft' // Determine editability based on status
+      } 
+    });
+  };
+
+  const handleCreateSegment = (formData: NewSegmentFormData) => {
+    // Navigate to SegmentBuilder with form data
+    navigate('/builder', { 
+      state: { 
+        segmentData: {
           name: formData.name, 
-          audience: formData.audience 
-        } 
+          audience: formData.audience,
+          source: formData.audience === 'contact' ? 'Contacts' : 'Leads',
+          lastUpdate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          statusReason: 'Draft',
+          createdBy: 'Current User',
+          membersCount: 0,
+          type: 'Dynamic',
+          status: 'Draft',
+          groups: []
+        },
+        isEditable: true // New draft segments should be editable
       } 
     });
   };
@@ -127,19 +145,34 @@ const SegmentsOverview: React.FC = () => {
             <Typography variant="h5" component="h1" sx={{ fontWeight: 600, color: 'text.primary' }}>
               All Segments
             </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={handleNewSegment}
-              sx={{
-                width: { xs: '100%', sm: 'auto' },
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': { transform: 'translateY(-1px)', boxShadow: 3 }
-              }}
-            >
-              New Segment
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={handleNewSegment}
+                sx={{
+                  width: { xs: '100%', sm: 'auto' },
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': { transform: 'translateY(-1px)', boxShadow: 3 }
+                }}
+              >
+                New Segment
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<TableChartIcon />}
+                onClick={() => window.open('/accounts-contacts', '_blank')}
+                sx={{
+                  width: { xs: '100%', sm: 'auto' },
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': { transform: 'translateY(-1px)', boxShadow: 3 }
+                }}
+              >
+                Table
+              </Button>
+            </Box>
           </Box>
 
           <Toolbar
@@ -245,20 +278,22 @@ const SegmentsOverview: React.FC = () => {
                 <TableBody>
                   {filteredSegments.map(segment => (
                     <TableRow 
-                      key={segment.id} 
-                      hover 
-                      sx={{
-                        transition: 'all 0.2s ease',
-                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
-                        '&:last-child td': { borderBottom: 0 }
-                      }}
-                    >
-                      <TableCell padding="checkbox" />
-                      <TableCell component="th" scope="row">
-                        <Typography variant="body1" sx={{ fontWeight: 500, color: 'primary.main', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
-                          {segment.name}
-                        </Typography>
-                      </TableCell>
+                    key={segment.id} 
+                    hover 
+                    onClick={() => handleSegmentClick(segment)}
+                    sx={{
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+                      '&:last-child td': { borderBottom: 0 }
+                    }}
+                  >
+                    <TableCell padding="checkbox" />
+                    <TableCell component="th" scope="row">
+                      <Typography variant="body1" sx={{ fontWeight: 500, color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}>
+                        {segment.name}
+                      </Typography>
+                    </TableCell>
                       <TableCell sx={{ color: 'text.primary' }}>{segment.source}</TableCell>
                       <TableCell sx={{ color: 'text.secondary' }}>{segment.lastUpdate}</TableCell>
                       <TableCell sx={{ color: 'text.secondary' }}>{segment.createdAt}</TableCell>
