@@ -137,7 +137,7 @@ const generateDraftSegment = (index: number): Segment => {
     membersCount: 0,
     type: 'Dynamic',
     status: 'Draft',
-    audience: 'contact',
+    audience: 'account',
     description: segmentDescriptions[segmentIndex],
     groups: [
       {
@@ -199,13 +199,13 @@ const generateReadySegment = (index: number): Segment => {
       }
     ];
   } else if (index % 4 === 1) {
-    // Industry + Account Category + State/Province
+    // Industry + Account Category + City
     mainConditions = [
       {
         id: generateConditionId(),
         attribute: 'industrycode',
         operator: '=',
-        value: 'Retail'
+        value: 'Technology'
       },
       {
         id: generateConditionId(),
@@ -215,9 +215,9 @@ const generateReadySegment = (index: number): Segment => {
       },
       {
         id: generateConditionId(),
-        attribute: 'address1_stateorprovince',
+        attribute: 'address1_city',
         operator: '=',
-        value: 'Texas'
+        value: 'New York'
       }
     ];
     subgroups = [];
@@ -247,19 +247,19 @@ const generateReadySegment = (index: number): Segment => {
             id: generateConditionId(),
             attribute: 'industrycode',
             operator: '=',
-            value: 'Manufacturing'
+            value: 'Technology'
           },
           {
             id: generateConditionId(),
             attribute: 'industrycode',
             operator: '=',
-            value: 'Energy'
+            value: 'Healthcare'
           },
           {
             id: generateConditionId(),
             attribute: 'industrycode',
             operator: '=',
-            value: 'Telecommunications'
+            value: 'Finance'
           }
         ],
         subgroups: []
@@ -272,7 +272,7 @@ const generateReadySegment = (index: number): Segment => {
         id: generateConditionId(),
         attribute: 'accountcategorycode',
         operator: '=',
-        value: 'Enterprise'
+        value: 'Medium Business'
       }
     ];
     subgroups = [
@@ -313,10 +313,10 @@ const generateReadySegment = (index: number): Segment => {
     createdAt: now,
     statusReason: 'Ready to use',
     createdBy: 'System Generated',
-    membersCount: Math.floor(Math.random() * 500) + 100, // Random member count between 100-599
+    membersCount: Math.floor(Math.random() * 20) + 0, // Random member count between 0-19
     type: 'Dynamic',
     status: 'Ready to use',
-    audience: 'contact',
+    audience: 'account',
     description: segmentDescriptions[segmentIndex],
     groups: [
       {
@@ -334,47 +334,35 @@ const generateReadySegment = (index: number): Segment => {
 const generateExampleSegments = (): void => {
   console.log('Generating example segments...');
   
-  // Get existing segments from storage
-  const existingSegments = getFromStorage<Segment>(SEGMENT_STORAGE_KEY, []);
+  // Check if segments already exist in storage
+  const existingSegments = getFromStorage<Segment[]>(SEGMENT_STORAGE_KEY, []);
   
-  // Generate new segments
-  const newSegments: Segment[] = [];
-  
-  // Generate more draft segments with diverse conditions
-  for (let i = 0; i < 4; i++) {
-    newSegments.push(generateDraftSegment(i));
-  }
-  
-  // Generate more ready-to-use segments with complex conditions
-  for (let i = 0; i < 6; i++) {
-    newSegments.push(generateReadySegment(i));
-  }
-  
-  // Combine existing and new segments, avoiding duplicates by name
-  const uniqueSegments = [...existingSegments];
-  const existingNames = new Set(uniqueSegments.map(seg => seg.name));
-  
-  for (const newSegment of newSegments) {
-    if (!existingNames.has(newSegment.name)) {
-      uniqueSegments.push(newSegment);
-      existingNames.add(newSegment.name);
+  // Only generate new segments if there are none in storage
+  if (existingSegments.length === 0) {
+    // Generate new segments
+    const newSegments: Segment[] = [];
+    
+    // Generate more draft segments with diverse conditions
+    for (let i = 0; i < 4; i++) {
+      newSegments.push(generateDraftSegment(i));
     }
-  }
-  
-  // Save segments to storage
-  saveToStorage(SEGMENT_STORAGE_KEY, uniqueSegments);
-  
-  const addedCount = uniqueSegments.length - existingSegments.length;
-  console.log(`Generated ${addedCount} new segments. Total segments in storage: ${uniqueSegments.length}`);
-  
-  if (addedCount > 0) {
+    
+    // Generate more ready-to-use segments with complex conditions
+    for (let i = 0; i < 6; i++) {
+      newSegments.push(generateReadySegment(i));
+    }
+    
+    // Save segments to storage
+    saveToStorage(SEGMENT_STORAGE_KEY, newSegments);
+    
+    console.log(`Generated ${newSegments.length} new segments. Total segments in storage: ${newSegments.length}`);
+    
     console.log('New segments added:');
-    const newlyAdded = uniqueSegments.slice(existingSegments.length);
-    newlyAdded.forEach(seg => {
-      console.log(`- ${seg.name} (${seg.status})`);
+    newSegments.forEach(seg => {
+      console.log(`- ${seg.name} (${seg.status}) - Members: ${seg.membersCount}`);
     });
   } else {
-    console.log('No new segments added (all already exist in storage).');
+    console.log(`Segments already exist in storage. Found ${existingSegments.length} segments.`);
   }
 };
 

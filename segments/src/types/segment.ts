@@ -9,7 +9,7 @@ export interface Segment {
   membersCount: number;
   type: 'Dynamic' | 'Static';
   status: 'Draft' | 'Ready to use' | 'Getting ready';
-  audience: 'contact' | 'leads';
+  audience: 'contact' | 'leads' | 'account';
   description?: string;
   groups: Group[];
 }
@@ -38,5 +38,5 @@ export interface SegmentFilter {
 
 export interface NewSegmentFormData {
   name: string;
-  audience: 'contact' | 'leads';
+  audience: 'contact' | 'leads' | 'account';
 }

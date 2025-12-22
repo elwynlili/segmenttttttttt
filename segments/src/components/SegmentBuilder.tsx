@@ -34,6 +34,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getAccountFields } from '../mock/customerFields';
 import type { Group, Condition, Segment } from '../types/segment';
 import { getFromStorage, saveToStorage } from '../utils/storage';
+import { calculateMembersCount, getMatchingMembers } from '../utils/segmentEvaluator';
+import type { Account, Contact } from '../types/accountContact';
 
 
 
@@ -64,6 +66,12 @@ const SegmentBuilder: React.FC = () => {
     type: 'group' as 'group' | 'condition',
     id: '',
     groupId: ''
+  });
+
+  // Customer info dialog state
+  const [customerInfoDialog, setCustomerInfoDialog] = useState({
+    open: false,
+    customers: [] as (Account | Contact)[]
   });
 
   // Helper function to recursively find a group by ID
@@ -300,7 +308,22 @@ const SegmentBuilder: React.FC = () => {
       lastUpdate: timestamp,
       statusReason: 'Draft',
       createdBy: segmentData?.createdBy || 'Current User',
-      membersCount: 0,
+      membersCount: calculateMembersCount({
+        id: segmentData?.id || `temp-${Date.now()}`,
+        name: segmentName,
+        description,
+        groups,
+        source: segmentData?.source || 'Contacts',
+        lastUpdate: timestamp,
+        createdAt: segmentData?.createdAt || timestamp,
+        statusReason: 'Draft',
+        createdBy: segmentData?.createdBy || 'Current User',
+        type: segmentData?.type || 'Dynamic',
+        status: 'Draft',
+        audience: segmentData?.audience || 'contact',
+        membersCount: 0
+      }),
+
       type: segmentData?.type || 'Dynamic',
       status: 'Draft',
       audience: segmentData?.audience || 'contact'
@@ -375,6 +398,7 @@ const SegmentBuilder: React.FC = () => {
         message: 'At least one group is required',
         severity: 'error'
       });
+      setLoading(false);
       return;
     }
 
@@ -390,7 +414,22 @@ const SegmentBuilder: React.FC = () => {
       lastUpdate: timestamp,
       statusReason: 'Ready to use',
       createdBy: segmentData?.createdBy || 'Current User',
-      membersCount: 0,
+      membersCount: calculateMembersCount({
+        id: segmentData?.id || `temp-${Date.now()}`,
+        name: segmentName,
+        description,
+        groups,
+        source: segmentData?.source || 'Contacts',
+        lastUpdate: timestamp,
+        createdAt: segmentData?.createdAt || timestamp,
+        statusReason: 'Ready to use',
+        createdBy: segmentData?.createdBy || 'Current User',
+        type: segmentData?.type || 'Dynamic',
+        status: 'Ready to use',
+        audience: segmentData?.audience || 'contact',
+        membersCount: 0
+      }),
+
       type: segmentData?.type || 'Dynamic',
       status: 'Ready to use',
       audience: segmentData?.audience || 'contact'
@@ -446,9 +485,60 @@ const SegmentBuilder: React.FC = () => {
     }, 1500);
   }, [segmentName, description, groups, segmentData, navigate, loading]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     navigate('/');
-  };
+  }, [navigate]);
+
+  // Handle display customer information
+  const handleDisplayCustomerInfo = useCallback(() => {
+    console.log('handleDisplayCustomerInfo called');
+    console.log('segmentName:', segmentName);
+    console.log('description:', description);
+    console.log('groups:', groups);
+    console.log('segmentData:', segmentData);
+    
+    // Build the current segment data
+    const currentSegment: Segment = {
+      id: segmentData?.id || `temp-${Date.now()}`,
+      name: segmentName,
+      description,
+      groups: segmentData?.groups || groups,
+      source: segmentData?.source || 'Contacts',
+      lastUpdate: new Date().toISOString(),
+      createdAt: segmentData?.createdAt || new Date().toISOString(),
+      statusReason: segmentData?.statusReason || 'Draft',
+      createdBy: segmentData?.createdBy || 'Current User',
+      type: segmentData?.type || 'Dynamic',
+      status: segmentData?.status || 'Draft',
+      audience: segmentData?.audience || 'contact',
+      membersCount: 0
+    };
+    
+    console.log('currentSegment:', currentSegment);
+    console.log('currentSegment.groups.length:', currentSegment.groups.length);
+    
+    // Get matching members
+    try {
+      const matchingCustomers = getMatchingMembers(currentSegment);
+      console.log('matchingCustomers length:', matchingCustomers.length);
+      console.log('matchingCustomers:', matchingCustomers);
+      
+      // Open dialog with customer info
+      setCustomerInfoDialog({
+        open: true,
+        customers: matchingCustomers
+      });
+      console.log('customerInfoDialog set to open');
+      console.log('customerInfoDialog state after setting:', { open: true, customers: matchingCustomers });
+    } catch (error) {
+      console.error('Error in handleDisplayCustomerInfo:', error);
+    }
+  }, [segmentName, description, groups, segmentData]);
+
+  // Close customer info dialog
+  const handleCloseCustomerInfoDialog = useCallback(() => {
+    setCustomerInfoDialog(prev => ({ ...prev, open: false }));
+  }, []);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', position: 'absolute', inset: 0, margin: 0, padding: 0 }}>
@@ -761,6 +851,7 @@ const SegmentBuilder: React.FC = () => {
                 </Box>
               </Box>
             )}
+          </Paper>
 
             {/* Group Type Dropdown */}
             {groupDropdownOpen && (
@@ -797,13 +888,21 @@ const SegmentBuilder: React.FC = () => {
                 </Box>
               </Paper>
             )}
-          </Paper>
           
           {/* View sample of included members */}
           <Box sx={{ textAlign: 'center', mt: 4 }}>
-            <Typography variant="body2" sx={{ color: 'primary.main', cursor: 'pointer', fontWeight: 500 }}>
+            <Typography variant="body2" sx={{ color: 'primary.main', cursor: 'pointer', fontWeight: 500, mb: 2 }}>
               View sample of included members
             </Typography>
+            {/* Button to display customer information */}
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleDisplayCustomerInfo}
+              sx={{ px: 4, py: 1, zIndex: 100 }}
+            >
+              展示当前segment包括的客户信息
+            </Button>
           </Box>
         </Box>
 
@@ -1244,205 +1343,11 @@ const SegmentBuilder: React.FC = () => {
                     >
                       Clicked
                     </Typography>
-
-            {/* Delete Confirmation Dialog */}
-            <Dialog
-              open={deleteDialog.open}
-              onClose={() => setDeleteDialog(prev => ({ ...prev, open: false }))}
-            >
-              <DialogTitle>
-                {deleteDialog.type === 'group' ? 'Delete Group' : 'Delete Condition'}
-              </DialogTitle>
-              <DialogContent>
-                <DialogContentText>
-                  {deleteDialog.type === 'group' 
-                    ? 'Are you sure you want to delete this group? All subgroups and conditions will also be deleted.' 
-                    : 'Are you sure you want to delete this condition?'}
-                </DialogContentText>
-              </DialogContent>
-              <DialogActions>
-                <Button 
-                  onClick={() => setDeleteDialog(prev => ({ ...prev, open: false }))}
-                  variant="outlined"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={deleteDialog.type === 'group' ? confirmDeleteGroup : confirmDeleteCondition}
-                  variant="contained"
-                  color="error"
-                >
-                  Delete
-                </Button>
-              </DialogActions>
-            </Dialog>
-
-            {/* Snackbar for user feedback */}
-            <Snackbar
-              open={snackbar.open}
-              autoHideDuration={6000}
-              onClose={handleSnackbarClose}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            >
-              <Alert 
-                onClose={handleSnackbarClose} 
-                severity={snackbar.severity} 
-                sx={{ width: '100%' }}
-              >
-                {snackbar.message}
-              </Alert>
-            </Snackbar>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                      onClick={() => {
-                        if (selectedGroupId) {
-                          handleAddConditionWithAttribute(selectedGroupId, 'email', 'consent_not_given');
-                        }
-                      }}
-                    >
-                      Consent not given
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                      onClick={() => {
-                        if (selectedGroupId) {
-                          handleAddConditionWithAttribute(selectedGroupId, 'email', 'delivered');
-                        }
-                      }}
-                    >
-                      Delivered
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                      onClick={() => {
-                        if (selectedGroupId) {
-                          handleAddConditionWithAttribute(selectedGroupId, 'email', 'feedback_loop');
-                        }
-                      }}
-                    >
-                      Feedback loop
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                      onClick={() => {
-                        if (selectedGroupId) {
-                          handleAddConditionWithAttribute(selectedGroupId, 'email', 'link_clicked');
-                        }
-                      }}
-                    >
-                      Link clicked
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                      onClick={() => {
-                        if (selectedGroupId) {
-                          handleAddConditionWithAttribute(selectedGroupId, 'email', 'opened');
-                        }
-                      }}
-                    >
-                      Opened
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                      onClick={() => {
-                        if (selectedGroupId) {
-                          handleAddConditionWithAttribute(selectedGroupId, 'email', 'sent');
-                        }
-                      }}
-                    >
-                      Sent
-                    </Typography>
-                    </Box>
-                  </AccordionDetails>
-                </Accordion>
-
-                <Accordion sx={{ mb: 1 }}>
-                  <AccordionSummary
-                    expandIcon={<ExpandMoreIcon />}
-                    aria-controls="website-content"
-                    id="website-header"
-                  >
-                    <Typography>Website activity</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                        onClick={() => {
-                          if (selectedGroupId) {
-                            handleAddConditionWithAttribute(selectedGroupId, 'website', 'pages_visited');
-                          }
-                        }}
-                      >
-                        Pages visited
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                        onClick={() => {
-                          if (selectedGroupId) {
-                            handleAddConditionWithAttribute(selectedGroupId, 'website', 'time_spent');
-                          }
-                        }}
-                      >
-                        Time spent on site
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                        onClick={() => {
-                          if (selectedGroupId) {
-                            handleAddConditionWithAttribute(selectedGroupId, 'website', 'last_visit');
-                          }
-                        }}
-                      >
-                        Last visit date
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                        onClick={() => {
-                          if (selectedGroupId) {
-                            handleAddConditionWithAttribute(selectedGroupId, 'website', 'visit_count');
-                          }
-                        }}
-                      >
-                        Number of visits
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                        onClick={() => {
-                          if (selectedGroupId) {
-                            handleAddConditionWithAttribute(selectedGroupId, 'website', 'referrer');
-                          }
-                        }}
-                      >
-                        Referrer source
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ p: 1, borderRadius: 1, '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
-                        onClick={() => {
-                          if (selectedGroupId) {
-                            handleAddConditionWithAttribute(selectedGroupId, 'website', 'device_type');
-                          }
-                        }}
-                      >
-                        Device type
-                      </Typography>
-                    </Box>
-                  </AccordionDetails>
-                </Accordion>
-              </Box>
-            )}
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            </Box>
+          )}
 
             {/* Segments Tab */}
             {activeTab === 2 && (
@@ -1568,6 +1473,164 @@ const SegmentBuilder: React.FC = () => {
         </>
       )}
     </Paper>
+
+    {/* Delete Confirmation Dialog */}
+    <Dialog
+      open={deleteDialog.open}
+      onClose={() => setDeleteDialog(prev => ({ ...prev, open: false }))}
+    >
+      <DialogTitle>
+        {deleteDialog.type === 'group' ? 'Delete Group' : 'Delete Condition'}
+      </DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          {deleteDialog.type === 'group' 
+            ? 'Are you sure you want to delete this group? All subgroups and conditions will also be deleted.' 
+            : 'Are you sure you want to delete this condition?'}
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button 
+          onClick={() => setDeleteDialog(prev => ({ ...prev, open: false }))}
+          variant="outlined"
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={deleteDialog.type === 'group' ? confirmDeleteGroup : confirmDeleteCondition}
+          variant="contained"
+          color="error"
+        >
+          Delete
+        </Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Customer Information Dialog */}
+    <Dialog
+      open={customerInfoDialog.open}
+      onClose={handleCloseCustomerInfoDialog}
+      maxWidth="md"
+      fullWidth
+    >
+      <DialogTitle>当前Segment包括的客户信息</DialogTitle>
+      <DialogContent>
+        <DialogContentText sx={{ mb: 3 }}>
+          共找到 {customerInfoDialog.customers.length} 个匹配的客户
+        </DialogContentText>
+        
+        <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+          {customerInfoDialog.customers.map((customer, index) => (
+            <Paper key={index} sx={{ p: 2, mb: 2, bgcolor: '#f9f9f9' }}>
+              {Object.prototype.hasOwnProperty.call(customer, 'name') ? (
+                // Account information
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {(customer as Account).name}
+                  </Typography>
+                  <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    {(customer as Account).accountnumber && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>客户编号</Typography>
+                        <Typography variant="body2">{(customer as Account).accountnumber}</Typography>
+                      </Box>
+                    )}
+                    {(customer as Account).industrycode && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>行业</Typography>
+                        <Typography variant="body2">{(customer as Account).industrycode}</Typography>
+                      </Box>
+                    )}
+                    {(customer as Account).accountcategorycode && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>客户规模</Typography>
+                        <Typography variant="body2">{(customer as Account).accountcategorycode}</Typography>
+                      </Box>
+                    )}
+                    {(customer as Account).telephone1 && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>电话</Typography>
+                        <Typography variant="body2">{(customer as Account).telephone1}</Typography>
+                      </Box>
+                    )}
+                    {(customer as Account).websiteurl && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>网站</Typography>
+                        <Typography variant="body2" component="a" href={(customer as Account).websiteurl} target="_blank" rel="noopener noreferrer">
+                          {(customer as Account).websiteurl}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              ) : (
+                // Contact information
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {(customer as Contact).firstname} {(customer as Contact).lastname}
+                  </Typography>
+                  <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    {(customer as Contact).jobtitle && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>职位</Typography>
+                        <Typography variant="body2">{(customer as Contact).jobtitle}</Typography>
+                      </Box>
+                    )}
+                    {(customer as Contact).department && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>部门</Typography>
+                        <Typography variant="body2">{(customer as Contact).department}</Typography>
+                      </Box>
+                    )}
+                    {(customer as Contact).emailaddress1 && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>邮箱</Typography>
+                        <Typography variant="body2" component="a" href={`mailto:${(customer as Contact).emailaddress1}`}>
+                          {(customer as Contact).emailaddress1}
+                        </Typography>
+                      </Box>
+                    )}
+                    {(customer as Contact).telephone1 && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>商务电话</Typography>
+                        <Typography variant="body2">{(customer as Contact).telephone1}</Typography>
+                      </Box>
+                    )}
+                    {(customer as Contact).mobilephone && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>移动电话</Typography>
+                        <Typography variant="body2">{(customer as Contact).mobilephone}</Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              )}
+            </Paper>
+          ))}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleCloseCustomerInfoDialog} color="primary">
+          关闭
+        </Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Snackbar for user feedback */}
+    <Snackbar
+      open={snackbar.open}
+      autoHideDuration={6000}
+      onClose={handleSnackbarClose}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+    >
+      <Alert 
+        onClose={handleSnackbarClose} 
+        severity={snackbar.severity} 
+        sx={{ width: '100%' }}
+      >
+        {snackbar.message}
+      </Alert>
+    </Snackbar>
     </Box>
     </Box>
   );

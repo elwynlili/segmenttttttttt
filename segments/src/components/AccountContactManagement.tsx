@@ -47,11 +47,7 @@ const AccountContactManagement: React.FC = () => {
     if (existingAccounts.length === 0 || existingContacts.length === 0) {
       console.log('No data found, generating fresh test data...');
       ensureTestDataExists();
-      // Reload data after generating
-      const freshAccounts = getFromStorage<Account>(ACCOUNT_STORAGE_KEY, []);
-      const freshContacts = getFromStorage<Contact>(CONTACT_STORAGE_KEY, []);
-      setAccounts(freshAccounts);
-      setContacts(freshContacts);
+      // Data will be loaded by useState function on next render
     } else {
       console.log('Data already exists, using existing data...');
       // No need for interval refresh
@@ -109,12 +105,11 @@ const AccountContactManagement: React.FC = () => {
   };
 
   // Handle form input change
-  const handleInputChange = (e: any) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    const target = e.target as HTMLInputElement;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? target.checked : value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
   };
 
@@ -216,7 +211,7 @@ const AccountContactManagement: React.FC = () => {
       field: 'createdAt',
       headerName: 'Created At',
       width: 180,
-      valueFormatter: (params: any) => new Date((params as any).value).toLocaleString()
+      valueFormatter: (params: GridValueFormatterParams<Date>) => new Date(params.value).toLocaleString()
     },
     {
       field: 'actions',
@@ -263,9 +258,9 @@ const AccountContactManagement: React.FC = () => {
       field: 'parentcustomerid',
       headerName: 'Account',
       width: 200,
-      valueFormatter: (params) => {
+      valueFormatter: (params: GridValueFormatterParams<string>) => {
         console.log('=== Account Column Debug ===');
-        console.log('Contact parentcustomerid:', (params as any).value);
+        console.log('Contact parentcustomerid:', params.value);
         console.log('Available accounts in state:', accounts.length);
         
         // Log first few account IDs for comparison
@@ -274,7 +269,7 @@ const AccountContactManagement: React.FC = () => {
         }
         
         // First try to find the account in the current state
-        let account = accounts.find(a => a.id === (params as any).value);
+        let account = accounts.find(a => a.id === params.value);
         
         // If not found in state, try to get from localStorage directly
         if (!account) {
@@ -284,7 +279,7 @@ const AccountContactManagement: React.FC = () => {
           if (allAccounts.length > 0) {
             console.log('First 5 account IDs in localStorage:', allAccounts.slice(0, 5).map(a => a.id));
           }
-          account = allAccounts.find(a => a.id === (params as any).value);
+          account = allAccounts.find(a => a.id === params.value);
         }
         
         console.log('Found account:', account?.name || 'NOT FOUND');
@@ -316,7 +311,7 @@ const AccountContactManagement: React.FC = () => {
       field: 'createdAt',
       headerName: 'Created At',
       width: 180,
-      valueFormatter: (params: any) => new Date((params as any).value).toLocaleString()
+      valueFormatter: (params: GridValueFormatterParams<Date>) => new Date(params.value).toLocaleString()
     },
     {
       field: 'actions',

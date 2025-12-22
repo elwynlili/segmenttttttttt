@@ -47,6 +47,7 @@ const SegmentsOverview: React.FC = () => {
     // Load segments from storage
     const loadSegments = () => {
       const loadedSegments = getFromStorage<Segment>(SEGMENT_STORAGE_KEY, mockSegments);
+      // Use the generated members count directly instead of recalculating
       setSegments(loadedSegments);
     };
     
@@ -271,7 +272,7 @@ const SegmentsOverview: React.FC = () => {
                     <TableCell sx={{ fontWeight: 600, minWidth: 150, color: 'text.secondary' }}>Created date</TableCell>
                     <TableCell sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>Status reason</TableCell>
                     <TableCell sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>Created by</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 80, color: 'text.secondary' }}>Members</TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 80, color: 'text.secondary', textAlign: 'right' }}>Members</TableCell>
                     <TableCell sx={{ fontWeight: 600, minWidth: 80, color: 'text.secondary' }}>Type</TableCell>
                   </TableRow>
                 </TableHead>

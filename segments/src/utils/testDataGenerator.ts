@@ -253,28 +253,18 @@ const generateTestData = (accountCount: number = 100, contactCount: number = 100
 const ensureTestDataExists = (): void => {
   console.log('ensureTestDataExists function called');
   
-  // Check if data already exists in localStorage
-  const existingAccounts = getFromStorage(ACCOUNT_STORAGE_KEY, []);
-  const existingContacts = getFromStorage(CONTACT_STORAGE_KEY, []);
+  // Generate new data every time to ensure we have fresh test data
+  console.log('Generating new test data...');
   
-  if (existingAccounts.length > 0 && existingContacts.length > 0) {
-    console.log('Test data already exists, using existing data...');
-    return; // Data already exists, no need to generate
-  }
-  
-  console.log('Test data not found, generating new English test data...');
-  
-  // Clear any partial data
-  if (existingAccounts.length === 0 || existingContacts.length === 0) {
-    console.log('Clearing partial data...');
-    saveToStorage(ACCOUNT_STORAGE_KEY, []);
-    saveToStorage(CONTACT_STORAGE_KEY, []);
-  }
+  // Clear existing data
+  console.log('Clearing existing data...');
+  saveToStorage(ACCOUNT_STORAGE_KEY, []);
+  saveToStorage(CONTACT_STORAGE_KEY, []);
   
   console.log('Starting new data generation...');
   
   // Generate new English data
-  generateTestData(100, 100);
+  generateTestData(50, 100);
   
   console.log('Data generation completed!');
   
