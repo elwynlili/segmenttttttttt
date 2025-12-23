@@ -502,7 +502,7 @@ const SegmentBuilder: React.FC = () => {
       id: segmentData?.id || `temp-${Date.now()}`,
       name: segmentName,
       description,
-      groups: segmentData?.groups || groups,
+      groups: groups,
       source: segmentData?.source || 'Contacts',
       lastUpdate: new Date().toISOString(),
       createdAt: segmentData?.createdAt || new Date().toISOString(),

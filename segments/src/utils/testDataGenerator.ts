@@ -260,11 +260,21 @@ const generateTestData = (accountCount: number = 100, contactCount: number = 100
 const ensureTestDataExists = (): void => {
   console.log('ensureTestDataExists function called');
   
-  // Generate new data every time to ensure we have fresh test data
-  console.log('Generating new test data...');
+  // Check if data already exists
+  const existingAccounts = getFromStorage<Account>(ACCOUNT_STORAGE_KEY, []);
+  const existingContacts = getFromStorage<Contact>(CONTACT_STORAGE_KEY, []);
   
-  // Clear existing data
-  console.log('Clearing existing data...');
+  if (existingAccounts.length > 0 && existingContacts.length > 0) {
+    console.log('Data already exists, using existing data...');
+    console.log(`Found ${existingAccounts.length} accounts and ${existingContacts.length} contacts in storage`);
+    return;
+  }
+  
+  // Data doesn't exist, generate new data
+  console.log('Data not found, generating new test data...');
+  
+  // Clear any partial data
+  console.log('Clearing existing data (if any)...');
   saveToStorage(ACCOUNT_STORAGE_KEY, []);
   saveToStorage(CONTACT_STORAGE_KEY, []);
   
