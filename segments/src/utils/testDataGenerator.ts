@@ -138,6 +138,13 @@ const generateAccountData = (index: number): NewAccountFormData => {
   const industry = industries[Math.floor(Math.random() * industries.length)];
   const category = accountCategories[Math.floor(Math.random() * accountCategories.length)];
   
+  // Generate random country (70% United States, 30% other countries)
+  const countries = ['United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Australia'];
+  const address1_country = Math.random() < 0.7 ? 'United States' : countries[Math.floor(Math.random() * countries.length)];
+  
+  // Generate random credit limit (0-500000, so some will be below 50000)
+  const creditlimit = Math.floor(Math.random() * 500000);
+  
   return {
     name: companyName,
     industrycode: industry as IndustryCode,
@@ -146,8 +153,8 @@ const generateAccountData = (index: number): NewAccountFormData => {
     telephone1: generatePhoneNumber(),
     websiteurl: `https://www.${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
     address1_city: cities[Math.floor(Math.random() * cities.length)],
-    address1_country: 'United States',
-    creditlimit: Math.floor(Math.random() * 500000) + 50000
+    address1_country,
+    creditlimit
   };
 };
 

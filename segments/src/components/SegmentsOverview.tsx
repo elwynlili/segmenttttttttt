@@ -29,6 +29,7 @@ import { mockSegments } from '../mock/segments';
 import NewSegmentDialog from './NewSegmentDialog';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getFromStorage } from '../utils/storage';
+import { calculateMembersCount } from '../utils/segmentEvaluator';
 
 const SegmentsOverview: React.FC = () => {
   const navigate = useNavigate();
@@ -47,8 +48,12 @@ const SegmentsOverview: React.FC = () => {
     // Load segments from storage
     const loadSegments = () => {
       const loadedSegments = getFromStorage<Segment>(SEGMENT_STORAGE_KEY, mockSegments);
-      // Use the generated members count directly instead of recalculating
-      setSegments(loadedSegments);
+      // Recalculate the actual members count for each segment
+      const segmentsWithActualCount = loadedSegments.map(segment => ({
+        ...segment,
+        membersCount: calculateMembersCount(segment)
+      }));
+      setSegments(segmentsWithActualCount);
     };
     
     // Call the function to load segments
