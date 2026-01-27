@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamics 365 Customer Insights - Journeys 安全角色管理指南</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #0078d4, #005a9e);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            font-size: 2em;
+            color: #0078d4;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        h3 {
+            font-size: 1.5em;
+            color: #005a9e;
+            margin: 30px 0 15px;
+        }
+        
+        h4 {
+            font-size: 1.2em;
+            color: #333;
+            margin: 20px 0 10px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        
+        .step {
+            background: #f9f9f9;
+            border-left: 4px solid #0078d4;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .step-number {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #0078d4;
+            margin-bottom: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            overflow-x: auto;
+            display: block;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+        }
+        
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .permission-level {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .level-none {
+            background-color: #ffcccc;
+            color: #cc0000;
+        }
+        
+        .level-basic {
+            background-color: #ffffcc;
+            color: #cc6600;
+        }
+        
+        .level-local {
+            background-color: #ccffcc;
+            color: #006600;
+        }
+        
+        .level-deep {
+            background-color: #cce5ff;
+            color: #004080;
+        }
+        
+        .level-global {
+            background-color: #e6ccff;
+            color: #660099;
+        }
+        
+        .entity-category {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .entity-category h4 {
+            margin-top: 0;
+            color: #0078d4;
+        }
+        
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .tip {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: white;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+
+        
+        .sidebar-title {
+            font-size: 1.2em;
+            color: #0078d4;
+            padding: 20px;
+            margin: 0;
+            border-bottom: 2px solid #e0e0e0;
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .main-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .main-nav > li {
+            margin: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .main-nav > li > a {
+            display: block;
+            padding: 15px 20px;
+            color: #333;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .main-nav > li > a:hover {
+            background-color: #f5f5f5;
+            color: #0078d4;
+            padding-left: 25px;
+        }
+        
+        .main-nav > li > a.active {
+            background-color: #0078d4;
+            color: white;
+            padding-left: 25px;
+        }
+        
+        .sub-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background-color: #f8f9fa;
+        }
+        
+        .sub-nav > li {
+            margin: 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .sub-nav > li > a {
+            display: block;
+            padding: 10px 30px;
+            color: #6c757d;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+        
+        .sub-nav > li > a:hover {
+            background-color: #e9ecef;
+            color: #0078d4;
+            padding-left: 35px;
+        }
+        
+        .sub-nav > li > a.active {
+            background-color: #dee2e6;
+            color: #0078d4;
+            padding-left: 35px;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            background-color: #f5f5f5;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            
+            .sidebar .main-nav {
+                display: flex;
+                overflow-x: auto;
+            }
+            
+            .sidebar .main-nav > li {
+                white-space: nowrap;
+                border-bottom: none;
+                border-right: 1px solid #f0f0f0;
+                position: relative;
+            }
+            
+            .sidebar .main-nav > li > a {
+                padding: 10px 15px;
+            }
+            
+            .sidebar .main-nav > li > a:hover,
+            .sidebar .main-nav > li > a.active {
+                padding-left: 15px;
+            }
+            
+            .sidebar .sub-nav {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 200px;
+                background-color: white;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                z-index: 1000;
+            }
+            
+            .sidebar .main-nav > li:hover .sub-nav {
+                display: block;
+            }
+            
+            .sidebar .sub-nav > li {
+                border-right: none;
+                border-bottom: 1px solid #f0f0f0;
+            }
+            
+            .sidebar .sub-nav > li > a {
+                padding: 10px 15px;
+            }
+            
+            .sidebar .sub-nav > li > a:hover {
+                padding-left: 20px;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            h2 {
+                font-size: 1.5em;
+            }
+            
+            h3 {
+                font-size: 1.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2 class="sidebar-title">导航菜单</h2>
+            <ul class="main-nav">
+                <li>
+                    <a href="#basics">基本概念</a>
+                </li>
+                <li>
+                    <a href="#hide-journeys">隐藏Journeys功能</a>
+                    <ul class="sub-nav">
+                        <li><a href="#hide-journeys">步骤 1：创建自定义安全角色</a></li>
+                        <li><a href="#hide-journeys">步骤 2：配置角色权限</a></li>
+                        <li><a href="#hide-journeys">步骤 3：分配安全角色</a></li>
+                        <li><a href="#hide-journeys">步骤 4：验证配置</a></li>
+                        <li><a href="#hide-journeys">其他隐藏方法</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#permission-levels">权限级别</a>
+                    <ul class="sub-nav">
+                        <li><a href="#permission-levels">设置位置</a></li>
+                        <li><a href="#permission-levels">级别详解</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#predefined-roles">预设安全角色</a>
+                    <ul class="sub-nav">
+                        <li><a href="#predefined-roles">角色列表</a></li>
+                        <li><a href="#predefined-roles">Excel对照表</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#entity-permissions">实体权限配置</a>
+                    <ul class="sub-nav">
+                        <li><a href="#entity-permissions">系统基础实体</a></li>
+                        <li><a href="#entity-permissions">营销配置实体</a></li>
+                        <li><a href="#entity-permissions">事件管理实体</a></li>
+                        <li><a href="#entity-permissions">域名与虚拟实体</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#best-practices">最佳实践</a>
+                    <ul class="sub-nav">
+                        <li><a href="#best-practices">安全角色管理</a></li>
+                        <li><a href="#best-practices">操作流程</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#troubleshooting">故障排除</a>
+                    <ul class="sub-nav">
+                        <li><a href="#troubleshooting">常见问题</a></li>
+                        <li><a href="#troubleshooting">权限验证工具</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="main-content">
+        
+        <div class="card" id="basics">
+            <h2>一、安全角色基本概念</h2>
+            
+            <div class="tip">
+                <strong>零基础入门</strong>：如果您是第一次接触Dynamics 365的安全管理，不用担心！本指南将从基础开始，一步一步教会您如何控制Customer Insights - Journeys的导航栏显示。
+            </div>
+            
+            <h3>什么是安全角色？</h3>
+            <p>在Dynamics 365中，安全角色是控制用户访问权限的核心组件，它由两部分组成：</p>
+            
+            <ul>
+                <li><strong>操作权限</strong>：定义用户可以对实体执行的操作（创建、读取、更新、删除等）</li>
+                <li><strong>数据访问级别</strong>：定义用户可以访问的数据范围（用户级、业务单位级、父业务单位级、组织级）</li>
+            </ul>
+            
+            <h3>Customer Insights - Journeys的权限控制原理</h3>
+            <p>Customer Insights - Journeys的导航栏显示是基于用户的安全角色权限的。简单来说：</p>
+            <ul>
+                <li>如果用户对Journeys相关实体没有<strong>读取权限</strong>，系统会自动从导航栏中隐藏Journeys功能</li>
+                <li>这是一个系统内置的机制，不需要额外配置</li>
+                <li>通过控制实体的读取权限，您可以精确控制用户看到的功能</li>
+            </ul>
+            
+            <h3>关于系统自带角色的重要提醒</h3>
+            <div class="warning">
+                <strong>关键点</strong>：请勿直接修改系统自带的现成角色（如"营销专业人员 - 业务"）。因为这些角色在系统更新时会被重置，您的修改会丢失。正确的做法是创建现有角色的副本，然后对副本进行自定义。
+            </div>
+            
+            <h3>Customer Insights - Journeys的许可证和用户管理</h3>
+            <p>与其他Dynamics 365应用不同，Customer Insights - Journeys使用<strong>基于容量的许可</strong>，而不是基于用户的（席位）许可：</p>
+            <ul>
+                <li>您可以为每个Customer Insights - Journeys实例添加任意数量的用户，无需额外费用</li>
+                <li>任何在您的Microsoft 365租户上拥有账户的用户都可以使用Customer Insights - Journeys应用</li>
+                <li>通过设置安全组来限制访问</li>
+                <li>Customer Insights - Journeys是租户级别的许可证，不需要为用户明确分配席位</li>
+            </ul>
+            
+            <div class="tip">
+                <strong>用户同步提示</strong>：要将使用组织Microsoft Entra ID的用户同步到Customer Insights - Journeys应用，只需向他们提供环境URL。当他们尝试使用环境时，他们的身份会同步到Dynamics 365，Dynamics 365会为他们创建用户并分配Marketer角色。
+            </div>
+        </div>
+        
+        <div class="card" id="hide-journeys">
+            <h2>二、隐藏Journeys功能的详细步骤</h2>
+            
+            <div class="step">
+                <div class="step-number">步骤 1：创建自定义安全角色</div>
+                <ol>
+                    <li>使用管理员账户登录 Power Platform 管理中心</li>
+                    <li>在左侧导航栏中选择 "环境"，然后点击您要配置的Dynamics 365环境</li>
+                    <li>点击页面顶部的 "设置" 菜单</li>
+                    <li>在 "用户 + 权限" 区域下，选择 "安全角色"</li>
+                    <li>在安全角色列表中，找到与您目标用户权限最接近的角色（例如 "营销专业人员 - 业务"）</li>
+                    <li>选中该角色左侧的复选框，然后在工具栏上点击 "更多操作" > "复制角色"</li>
+                    <li>为新角色起一个易于识别的名字，比如"营销专员（无旅程权限）"</li>
+                </ol>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">步骤 2：配置角色权限（核心步骤）</div>
+                <ol>
+                    <li>在安全角色列表中，找到并点击您刚刚创建的新角色的名称，以打开其权限设置窗口</li>
+                    <li>在权限窗口中，重点关注以下两个选项卡：</li>
+                    <ul>
+                        <li><strong>"核心记录"选项卡</strong>：取消与客户旅程相关的实体（例如 "客户旅程"）的所有权限（读、写、创建等）</li>
+                        <li><strong>"自定义实体"选项卡</strong>：Customer Insights - Journeys 创建的许多实体都位于此选项卡下。请仔细检查并取消所有与旅程功能相关的实体权限。</li>
+                    </ul>
+                    <li>为了彻底隐藏，您可能需要检查的实体包括但不限于：Customer Journey， Marketing Segment(如果细分管理也需隐藏) 等。将它们的权限从任何级别的访问（如"用户"、"业务部门"、"组织"）都改为"无"</li>
+                    <li>点击 "保存并关闭" 以保存您的设置</li>
+                </ol>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">步骤 3：将新角色分配给用户</div>
+                <ol>
+                    <li>在环境的 "设置" > "用户 + 权限" 下，选择 "用户"</li>
+                    <li>在用户列表中，找到并选择您要分配新角色的用户</li>
+                    <li>点击顶部的 "管理角色" 按钮</li>
+                    <li>在弹出的对话框中，勾选您刚才创建的新角色（如"营销专员（无旅程权限）"）</li>
+                    <li>确保取消勾选任何可能包含Journeys权限的其他安全角色</li>
+                    <li>点击 "确定" 按钮完成分配</li>
+                </ol>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">步骤 4：验证配置是否生效</div>
+                <ol>
+                    <li>以目标用户身份登录Dynamics 365系统</li>
+                    <li>打开 "Customer Insights - Journeys" 应用</li>
+                    <li>检查导航栏是否不再显示 "Journeys" 功能</li>
+                    <li>尝试通过直接URL访问Journeys功能，确认是否会收到权限错误</li>
+                </ol>
+            </div>
+            
+            <div class="warning">
+                <strong>重要提醒</strong>：请勿直接修改系统自带的现成角色（如"营销专业人员 - 业务"）。因为这些角色在系统更新时会被重置，您的修改会丢失。正确的做法是创建现有角色的副本，然后对副本进行自定义。
+            </div>
+            
+            <h3>其他隐藏导航栏功能的方法</h3>
+            <p>除了调整安全角色权限，您确实有其他方法来隐藏导航栏中的特定功能（如"Journeys"）。这些方法主要在配置层级上操作，可以实现更直接或界面化的控制。</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>方法</th>
+                        <th>实施层面</th>
+                        <th>核心机制</th>
+                        <th>优点</th>
+                        <th>注意事项</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>编辑站点地图</td>
+                        <td>应用导航结构</td>
+                        <td>直接修改应用的导航配置文件（SiteMap）</td>
+                        <td>控制精准，可彻底隐藏项目；与权限控制结合更灵活</td>
+                        <td>属于高级定制，需通过解决方案导入导出；修改影响所有使用者</td>
+                    </tr>
+                    <tr>
+                        <td>使用新版应用设计器</td>
+                        <td>特定应用界面</td>
+                        <td>在应用设计器的图形化界面中取消勾选对应导航项</td>
+                        <td>操作相对直观简单，无需编辑XML</td>
+                        <td>主要控制整个导航组的显隐，精细度可能不如SiteMap</td>
+                    </tr>
+                    <tr>
+                        <td>功能区自定义</td>
+                        <td>特定实体界面</td>
+                        <td>通过RibbonDiffXml隐藏特定命令按钮</td>
+                        <td>针对实体表单或列表上的具体按钮</td>
+                        <td>通常用于隐藏特定按钮，而非主导航项；实现相对复杂</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h4>✏️ 编辑站点地图</h4>
+            <p>站点地图定义了Dynamics 365应用的整个导航结构，包括区域、子区域和链接。通过直接编辑SiteMap，可以移除或隐藏特定的导航项目。这是最彻底的方法之一。</p>
+            
+            <p><strong>操作思路：</strong></p>
+            <ol>
+                <li>进入解决方案：在Power Platform管理中心，进入相应环境，通过"解决方案"添加现有应用。</li>
+                <li>编辑站点地图：在应用组件中找到"站点地图"并进行编辑。这将打开一个XML编辑器。</li>
+                <li>修改XML：在SiteMap的XML结构中，找到代表"Journeys"功能的&lt;Area&gt;或&lt;SubArea&gt;元素。您可以注释掉或直接删除该节点。注释掉的优点是便于日后恢复。</li>
+                <li>发布更改：保存并发布自定义项。</li>
+            </ol>
+            
+            <p><strong>优势：</strong>可以与安全角色深度集成。例如，可以为某个&lt;SubArea&gt;添加&lt;Privilege&gt;元素，指定只有拥有特定实体（如"客户旅程"实体）权限的用户才能看到此导航。如果用户因权限不足无法看到某个区域内的任何子区域，则该区域也不会显示。</p>
+            
+            <h4>🖥️ 使用新版应用设计器</h4>
+            <p>对于由模型驱动应用提供的导航栏，可以使用新版的应用设计器进行图形化界面调整。</p>
+            
+            <p><strong>操作思路：</strong></p>
+            <ol>
+                <li>打开应用设计器：访问Power Apps制作门户，找到对应的应用并点击"编辑"。</li>
+                <li>编辑导航栏：在设计器中切换到"导航栏"编辑界面，通常在右侧会显示导航结构。</li>
+                <li>隐藏项目：找到代表"Journeys"的导航项，取消其勾选状态即可将其隐藏。</li>
+            </ol>
+            
+            <p>这种方法更适合快速隐藏整个导航组，比如"营销"区域下的"客户旅程"子项。</p>
+            
+            <h4>⚙️ 功能区自定义</h4>
+            <p>此方法用于隐藏特定实体表单或列表上的按钮或选项卡，而非主导航栏。技术上是使用&lt;HideCustomAction&gt;元素在功能区定义中移除特定按钮。不过，Microsoft建议，如果目标是隐藏与权限相关的按钮，应优先通过调整安全角色权限来实现，这更符合系统设计。</p>
+            
+            <h4>💡 操作建议</h4>
+            <p>选择哪种方法取决于您的具体需求：</p>
+            <ul>
+                <li><strong>追求精细控制且熟悉高级定制：</strong>建议使用编辑站点地图的方法。它功能最强，能与权限系统完美结合，实现基于角色的导航项显示。</li>
+                <li><strong>需要快速隐藏整个导航组且改动最小：</strong>可以尝试新版应用设计器的图形化操作。</li>
+                <li><strong>核心目标就是权限管控：</strong>您最初采用的调整安全角色权限依然是最基本、最推荐的方式。站点地图中的导航选项会根据用户安全角色权限进行评估，无权限的用户将看不到相应导航。</li>
+            </ul>
+            
+            <p>进行任何定制前，请务必在测试环境中充分验证，并做好更改备份。</p>
+        </div>
+        
+        <div class="card" id="permission-levels">
+            <h2>三、权限级别说明</h2>
+            
+            <h3>权限级别的设置位置</h3>
+            <div class="tip">
+                <strong>操作前准备</strong>：在设置权限级别之前，请确保您拥有系统管理员或安全角色管理员的权限，这样才能编辑安全角色。
+            </div>
+            
+            <ol>
+                <li><strong>登录Dynamics 365系统</strong>：使用您的管理员账户登录</li>
+                <li><strong>打开高级设置</strong>：点击右上角的设置图标（齿轮图标），选择"高级设置"</li>
+                <li><strong>进入安全角色管理</strong>：在高级设置页面，点击顶部导航栏的"设置" > "安全性" > "安全角色"</li>
+                <li><strong>选择并编辑角色</strong>：在安全角色列表中，选择要编辑的安全角色，点击"编辑"按钮</li>
+                <li><strong>找到目标实体</strong>：在安全角色编辑页面，选择相应的选项卡（如"业务管理"、"营销"等）</li>
+                <li><strong>设置权限级别</strong>：找到目标实体，在其对应的权限列中，通过下拉菜单选择权限级别</li>
+            </ol>
+            
+            <h3>权限级别详解</h3>
+            <p>权限级别决定了用户可以访问的数据范围，从严格到宽松依次为：</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>权限级别</th>
+                        <th>显示标签</th>
+                        <th>描述</th>
+                        <th>适用场景</th>
+                        <th>图标表示</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="permission-level level-none">None</span></td>
+                        <td>无</td>
+                        <td>用户对该实体无任何权限</td>
+                        <td>需要完全隐藏的功能，如Journeys功能</td>
+                        <td>🔒</td>
+                    </tr>
+                    <tr>
+                        <td><span class="permission-level level-basic">Basic</span></td>
+                        <td>基本（用户级）</td>
+                        <td>用户只能访问自己创建的记录</td>
+                        <td>个人工作项，如个人联系人、个人任务</td>
+                        <td>👤</td>
+                    </tr>
+                    <tr>
+                        <td><span class="permission-level level-local">Local</span></td>
+                        <td>本地（业务单位级）</td>
+                        <td>用户可以访问所在业务单位内所有用户创建的记录</td>
+                        <td>部门内协作，如部门级营销活动、部门客户</td>
+                        <td>🏢</td>
+                    </tr>
+                    <tr>
+                        <td><span class="permission-level level-deep">Deep</span></td>
+                        <td>深度（父业务单位级）</td>
+                        <td>用户可以访问所在业务单位及其所有子业务单位的记录</td>
+                        <td>区域管理，如区域营销总监、区域销售经理</td>
+                        <td>🏙️</td>
+                    </tr>
+                    <tr>
+                        <td><span class="permission-level level-global">Global</span></td>
+                        <td>全局（组织级）</td>
+                        <td>用户可以访问组织内所有记录</td>
+                        <td>系统管理员，全局营销配置，企业高管</td>
+                        <td>🌍</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="tip">
+                <strong>实用技巧</strong>：对于隐藏Journeys功能，您需要将相关实体的权限级别设置为<strong>None</strong>，这样系统会自动从导航栏中隐藏该功能。
+            </div>
+        </div>
+        
+        <div class="card" id="predefined-roles">
+            <h2>四、预设安全角色列表</h2>
+            
+            <div class="tip">
+                <strong>重要说明</strong>：Customer Insights - Journeys提供了多种预设安全角色，这些角色已经配置好了常见的权限组合，您可以直接使用或作为创建自定义角色的基础。
+            </div>
+            
+            <h3>所有预设安全角色</h3>
+            <p>Customer Insights - Journeys提供了以下预设安全角色，适用于不同的业务场景：</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>安全角色名称</th>
+                        <th>适用场景</th>
+                        <th>权限范围</th>
+                        <th>建议用户</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Event Administrator</td>
+                        <td>负责管理所有事件相关功能的用户</td>
+                        <td>组织级（全局）</td>
+                        <td>营销总监、活动策划主管</td>
+                    </tr>
+                    <tr>
+                        <td>Event Administrator (BU level)</td>
+                        <td>负责管理特定业务单位事件的用户</td>
+                        <td>业务单位级</td>
+                        <td>区域活动经理</td>
+                    </tr>
+                    <tr>
+                        <td>Event Planner (BU level)</td>
+                        <td>负责规划特定业务单位事件的用户</td>
+                        <td>业务单位级</td>
+                        <td>活动策划专员</td>
+                    </tr>
+                    <tr>
+                        <td>Lead Score Modeler</td>
+                        <td>负责创建和管理潜在客户评分模型的用户</td>
+                        <td>组织级（全局）</td>
+                        <td>营销分析师、销售运营经理</td>
+                    </tr>
+                    <tr>
+                        <td>Lead Score Modeler (BU level)</td>
+                        <td>负责特定业务单位潜在客户评分模型的用户</td>
+                        <td>业务单位级</td>
+                        <td>区域营销分析师</td>
+                    </tr>
+                    <tr>
+                        <td>Lead Score Viewer</td>
+                        <td>只能查看潜在客户评分的用户</td>
+                        <td>组织级（仅读取）</td>
+                        <td>销售代表、客户成功经理</td>
+                    </tr>
+                    <tr>
+                        <td>Lead Score Viewer (BU level)</td>
+                        <td>只能查看特定业务单位潜在客户评分的用户</td>
+                        <td>业务单位级（仅读取）</td>
+                        <td>区域销售经理</td>
+                    </tr>
+                    <tr>
+                        <td>Marketing Manager - Business</td>
+                        <td>负责管理营销活动的用户</td>
+                        <td>组织级</td>
+                        <td>营销经理、市场总监</td>
+                    </tr>
+                    <tr>
+                        <td>Marketing Manager (BU level) - Business</td>
+                        <td>负责管理特定业务单位营销活动的用户</td>
+                        <td>业务单位级</td>
+                        <td>区域营销经理</td>
+                    </tr>
+                    <tr>
+                        <td>Marketing Professional - Business</td>
+                        <td>负责执行营销活动的用户</td>
+                        <td>业务单位级</td>
+                        <td>营销专员、内容创作者</td>
+                    </tr>
+                    <tr>
+                        <td>Marketing Professional (BU level) - Business</td>
+                        <td>负责执行特定业务单位营销活动的用户</td>
+                        <td>业务单位级</td>
+                        <td>区域营销专员</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>Event Administrator角色详情</h3>
+            <p>以下是Event Administrator角色（角色ID：a31a2242-bf8f-e611-80d7-00155d4b201d）的核心权限配置：</p>
+            
+            <div class="entity-category">
+                <h4>核心权限特点</h4>
+                <ul>
+                    <li>对所有事件管理实体拥有全局（Global）权限</li>
+                    <li>对营销表单、营销电子邮件等营销实体拥有全局权限</li>
+                    <li>对系统基础实体（如业务单位、实体定义）拥有读取权限</li>
+                    <li>对联系人实体拥有基本（Basic）权限</li>
+                </ul>
+            </div>
+            
+            <h3>Excel格式角色权限对照表</h3>
+            <p>为了更方便地管理和参考安全角色权限，您可以创建一个Excel格式的角色权限对照表。以下是创建此类表格的建议结构：</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>角色类别</th>
+                        <th>角色名称</th>
+                        <th>角色ID</th>
+                        <th>核心实体</th>
+                        <th>操作权限</th>
+                        <th>访问级别</th>
+                        <th>适用场景</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>事件管理</td>
+                        <td>Event Administrator</td>
+                        <td>a31a2242-bf8f-e611-80d7-00155d4b201d</td>
+                        <td>msevtmgt_Event, msevtmgt_EventRegistration等</td>
+                        <td>全操作（创建/读取/更新/删除/追加/追加到）</td>
+                        <td>Global</td>
+                        <td>负责管理所有事件相关功能的用户</td>
+                    </tr>
+                    <tr>
+                        <td>潜在客户评分</td>
+                        <td>Lead Score Viewer</td>
+                        <td>-</td>
+                        <td>msdynmkt_leadscore等</td>
+                        <td>仅读取</td>
+                        <td>Local</td>
+                        <td>只能查看潜在客户评分的用户</td>
+                    </tr>
+                    <tr>
+                        <td>营销管理</td>
+                        <td>Marketing Professional - Business</td>
+                        <td>-</td>
+                        <td>msdynmkt_marketingform, msdynmkt_marketingemail等</td>
+                        <td>全操作（除系统配置）</td>
+                        <td>Local</td>
+                        <td>负责执行营销活动的用户</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="tip">
+                <strong>创建Excel对照表的建议</strong>：
+                <ul>
+                    <li>使用一致的实体名称（如客户旅程对应msdyncrm_customerjourney）</li>
+                    <li>明确标注权限状态（勾选/仅Read）</li>
+                    <li>对应正确的访问级别（Global/Local/Deep/Basic）</li>
+                    <li>包含适用场景说明，便于快速理解角色用途</li>
+                </ul>
+            </div>
+            
+            <div class="warning">
+                <strong>注意</strong>：Customer Insights - Journeys产品正在不断发展，文档中记录的角色可能与产品当前状态不完全匹配。
+            </div>
+        </div>
+        
+        <div class="card" id="entity-permissions">
+            <h2>五、实体权限配置详情</h2>
+            
+            <div class="tip">
+                <strong>配置实体权限的重要性</strong>：要隐藏Journeys功能，关键是要正确配置相关实体的权限。本节将详细介绍需要关注的实体及其权限设置。
+            </div>
+            
+            <h3>需要控制的关键实体</h3>
+            <p>要隐藏导航栏中的Journeys功能，您需要关注以下关键实体的权限设置：</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>实体名称</th>
+                        <th>显示名称</th>
+                        <th>权限设置</th>
+                        <th>配置说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>msdyncrm_customerjourney</td>
+                        <td>客户旅程</td>
+                        <td>设置为"无"</td>
+                        <td>核心实体，控制Journeys功能的显示</td>
+                    </tr>
+                    <tr>
+                        <td>msdynmkt_marketingform</td>
+                        <td>营销表单</td>
+                        <td>根据需要设置</td>
+                        <td>如果要完全隐藏营销功能，也可以设置为"无"</td>
+                    </tr>
+                    <tr>
+                        <td>msdynmkt_marketingemail</td>
+                        <td>营销电子邮件</td>
+                        <td>根据需要设置</td>
+                        <td>如果要完全隐藏营销功能，也可以设置为"无"</td>
+                    </tr>
+                    <tr>
+                        <td>msdynmkt_segment</td>
+                        <td>客户细分</td>
+                        <td>根据需要设置</td>
+                        <td>如果要隐藏细分管理，设置为"无"</td>
+                    </tr>
+                    <tr>
+                        <td>msevtmgt_Event</td>
+                        <td>事件</td>
+                        <td>根据需要设置</td>
+                        <td>如果要保留事件管理功能，可保持原有权限</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>Event Administrator角色权限参考</h3>
+            <p>以下是Event Administrator角色（角色标识符：a31a2242-bf8f-e611-80d7-00155d4b201d）对各类实体的权限配置，可作为参考：</p>
+            
+            <div class="entity-category">
+                <h4>1. 系统基础实体</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>实体名称</th>
+                            <th>读取权限</th>
+                            <th>写入权限</th>
+                            <th>创建权限</th>
+                            <th>追加权限</th>
+                            <th>追加到权限</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>BusinessUnit（业务单位）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>Contact（联系人）</td>
+                            <td><span class="permission-level level-basic">Basic</span></td>
+                            <td><span class="permission-level level-basic">Basic</span></td>
+                            <td><span class="permission-level level-basic">Basic</span></td>
+                            <td><span class="permission-level level-basic">Basic</span></td>
+                            <td><span class="permission-level level-basic">Basic</span></td>
+                        </tr>
+                        <tr>
+                            <td>Customization（自定义）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>Entity（实体）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>Attribute（属性）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="entity-category">
+                <h4>2. 营销配置实体</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>实体名称</th>
+                            <th>读取权限</th>
+                            <th>写入权限</th>
+                            <th>创建权限</th>
+                            <th>追加权限</th>
+                            <th>追加到权限</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>msdyncrm_customerinsightsinfo</td>
+                            <td><span class="permission-level level-basic">Basic</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>msdyncrm_marketingconfiguration</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>msdyncrm_featureconfiguration</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>msdynmkt_marketingform（营销表单）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                        </tr>
+                        <tr>
+                            <td>msdynmkt_marketingformsubmission（营销表单提交）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="entity-category">
+                <h4>3. 事件管理实体</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>实体名称</th>
+                            <th>读取权限</th>
+                            <th>写入权限</th>
+                            <th>创建权限</th>
+                            <th>追加权限</th>
+                            <th>追加到权限</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>msevtmgt_Event（事件）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                        </tr>
+                        <tr>
+                            <td>msevtmgt_EventRegistration（事件注册）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                        </tr>
+                        <tr>
+                            <td>msevtmgt_AttendeePass（与会者通行证）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                        </tr>
+                        <tr>
+                            <td>msevtmgt_Session（会话）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                        </tr>
+                        <tr>
+                            <td>msevtmgt_Speaker（演讲者）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="entity-category">
+                <h4>4. 域名与虚拟实体</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>实体名称</th>
+                            <th>读取权限</th>
+                            <th>写入权限</th>
+                            <th>创建权限</th>
+                            <th>追加权限</th>
+                            <th>追加到权限</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>msdynmkt_domain（域名）</td>
+                            <td><span class="permission-level level-deep">Deep</span></td>
+                            <td><span class="permission-level level-deep">Deep</span></td>
+                            <td><span class="permission-level level-deep">Deep</span></td>
+                            <td><span class="permission-level level-deep">Deep</span></td>
+                            <td><span class="permission-level level-deep">Deep</span></td>
+                        </tr>
+                        <tr>
+                            <td>msdynmkt_virtualdomain（虚拟域名）</td>
+                            <td><span class="permission-level level-global">Global</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card" id="best-practices">
+            <h2>六、最佳实践</h2>
+            
+            <div class="tip">
+                <strong>专家建议</strong>：以下最佳实践来自Microsoft官方文档和行业专家经验，遵循这些建议可以确保您的安全配置既有效又易于维护。
+            </div>
+            
+            <h3>安全角色管理最佳实践</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>最佳实践</th>
+                        <th>详细说明</th>
+                        <th>实施建议</th>
+                        <th>常见错误</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>使用最小权限原则</td>
+                        <td>只授予用户完成工作所需的最小权限</td>
+                        <td>先分析用户的具体工作职责，然后只授予必要的权限</td>
+                        <td>为所有用户分配过多权限，导致安全风险</td>
+                    </tr>
+                    <tr>
+                        <td>创建专用安全角色</td>
+                        <td>为不同的访问需求创建专用的安全角色，而不是修改系统默认角色</td>
+                        <td>基于业务流程和工作职责设计角色，如"内容创建者"、"活动协调员"等</td>
+                        <td>直接修改系统自带角色，导致系统更新后设置丢失</td>
+                    </tr>
+                    <tr>
+                        <td>测试配置</td>
+                        <td>在部署到生产环境前，先在测试环境中验证配置</td>
+                        <td>创建测试用户，模拟实际使用场景，验证权限是否正确</td>
+                        <td>未测试就直接部署，导致用户无法正常工作</td>
+                    </tr>
+                    <tr>
+                        <td>文档化配置</td>
+                        <td>记录安全角色的配置详情，便于后续管理和审计</td>
+                        <td>使用Excel或其他工具记录每个角色的权限设置和适用场景</td>
+                        <td>无文档记录，导致后续维护困难</td>
+                    </tr>
+                    <tr>
+                        <td>定期审查</td>
+                        <td>定期审查安全角色配置，确保权限设置与业务需求保持一致</td>
+                        <td>每季度或半年进行一次权限审查，调整不符合业务需求的设置</td>
+                        <td>长期不审查，导致权限设置过时</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>操作流程最佳实践</h3>
+            
+            <ol>
+                <li><strong>从现有角色复制</strong>：
+                    <ul>
+                        <li>始终从与目标权限最接近的现有角色复制，而不是从零开始创建</li>
+                        <li>这样可以确保基础权限正确，只需调整特定实体的权限</li>
+                    </ul>
+                </li>
+                <li><strong>命名规范</strong>：
+                    <ul>
+                        <li>使用清晰、描述性的名称命名自定义角色，如"营销专员（无旅程权限）"</li>
+                        <li>包含角色的核心功能和权限范围，便于识别</li>
+                    </ul>
+                </li>
+                <li><strong>批量分配</strong>：
+                    <ul>
+                        <li>对于多个用户需要相同权限的情况，考虑使用团队来批量分配安全角色</li>
+                        <li>这样可以简化管理，当权限需要调整时，只需修改团队的角色分配</li>
+                    </ul>
+                </li>
+                <li><strong>权限验证</strong>：
+                    <ul>
+                        <li>在分配角色后，务必以用户身份登录验证权限是否正确</li>
+                        <li>检查导航栏显示、功能访问和数据可见性</li>
+                    </ul>
+                </li>
+                <li><strong>系统更新后检查</strong>：
+                    <ul>
+                        <li>在系统更新后，检查自定义角色是否需要调整</li>
+                        <li>系统更新可能会影响权限设置，特别是当有新功能或实体添加时</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h3>Microsoft官方建议</h3>
+            <div class="entity-category">
+                <h4>关于许可证和用户管理</h4>
+                <ul>
+                    <li>使用基于容量的许可模型，为Customer Insights - Journeys实例添加任意数量的用户</li>
+                    <li>通过设置安全组来限制环境访问，而不是依赖用户许可证</li>
+                    <li>对于没有Dynamics 365许可证的Microsoft 365用户，可以分配免费的Customer Insights - Journeys用户许可证</li>
+                    <li>如果自动用户同步失败，使用$0用户许可证强制同步</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card" id="troubleshooting">
+            <h2>七、故障排除</h2>
+            
+            <div class="tip">
+                <strong>问题解决指南</strong>：遇到权限相关问题时，不要着急！本部分提供了常见问题的详细解决方案，帮助您快速排查和解决问题。
+            </div>
+            
+            <h3>常见问题及解决方案</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>问题描述</th>
+                        <th>可能原因</th>
+                        <th>解决方案</th>
+                        <th>预防措施</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>导航栏仍然显示Journeys</td>
+                        <td>用户分配了多个安全角色，其他角色包含Journeys权限</td>
+                        <td>检查并确保用户只分配了不含Journeys权限的安全角色；使用"管理角色"功能查看用户的所有角色</td>
+                        <td>为用户只分配必要的安全角色，避免角色权限冲突</td>
+                    </tr>
+                    <tr>
+                        <td>权限更改不生效</td>
+                        <td>未保存安全角色更改或缓存问题</td>
+                        <td>确认保存更改，清除浏览器缓存并重新登录；尝试使用其他浏览器测试</td>
+                        <td>更改权限后立即验证，确保设置已保存</td>
+                    </tr>
+                    <tr>
+                        <td>用户无法访问其他Customer Insights功能</td>
+                        <td>移除了过多权限，影响了其他功能</td>
+                        <td>确保只移除Journeys相关实体的权限，保留其他功能权限；参考预设角色的权限设置</td>
+                        <td>从预设角色复制后再修改，确保保留基础权限</td>
+                    </tr>
+                    <tr>
+                        <td>团队成员权限异常</td>
+                        <td>团队继承了包含Journeys权限的安全角色</td>
+                        <td>检查团队的安全角色分配，确保团队也使用正确的角色；考虑创建专门的团队角色</td>
+                        <td>为团队分配与成员职责匹配的安全角色</td>
+                    </tr>
+                    <tr>
+                        <td>系统更新后权限重置</td>
+                        <td>直接修改了系统默认角色</td>
+                        <td>使用从默认角色复制的自定义角色，避免修改默认角色；重新创建自定义角色</td>
+                        <td>始终创建自定义角色的副本，从不直接修改系统默认角色</td>
+                    </tr>
+                    <tr>
+                        <td>用户无法登录Customer Insights - Journeys</td>
+                        <td>用户同步问题或许可证问题</td>
+                        <td>确保用户在Microsoft 365租户中有账户；尝试分配免费的Customer Insights - Journeys用户许可证</td>
+                        <td>使用安全组控制访问，确保用户已添加到正确的安全组</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>权限验证工具与方法</h3>
+            <p>以下是验证权限配置的四种有效方法，按推荐顺序排列：</p>
+            
+            <ol>
+                <li><strong>方法一：模拟用户访问</strong>
+                    <ul>
+                        <li>以目标用户身份登录系统</li>
+                        <li>尝试访问预期的数据和功能</li>
+                        <li>检查导航栏是否显示正确的功能</li>
+                        <li>优点：最直接，能完全模拟用户体验</li>
+                    </ul>
+                </li>
+                <li><strong>方法二：使用"以其他用户身份登录"功能</strong>
+                    <ul>
+                        <li>使用系统管理员账户登录</li>
+                        <li>导航至"设置" > "安全性" > "用户"</li>
+                        <li>选择目标用户</li>
+                        <li>点击"以其他用户身份登录"</li>
+                        <li>优点：无需知道用户密码，方便管理员快速测试</li>
+                    </ul>
+                </li>
+                <li><strong>方法三：查看用户的安全角色</strong>
+                    <ul>
+                        <li>导航至"设置" > "安全性" > "用户"</li>
+                        <li>打开目标用户记录</li>
+                        <li>查看"管理角色"显示的安全角色列表</li>
+                        <li>优点：快速了解用户的权限分配情况</li>
+                    </ul>
+                </li>
+                <li><strong>方法四：检查团队的成员和角色</strong>
+                    <ul>
+                        <li>导航至"设置" > "安全性" > "团队"</li>
+                        <li>打开目标团队记录</li>
+                        <li>查看"成员"和"管理角色"选项卡</li>
+                        <li>优点：了解团队级别的权限分配，适用于批量用户管理</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h3>权限调试最佳实践</h3>
+            <ol>
+                <li><strong>从简单开始</strong>：先验证基本权限，再添加复杂配置</li>
+                <li><strong>逐步测试</strong>：每次更改后立即测试，避免累积多个问题</li>
+                <li><strong>记录更改</strong>：记录每次权限更改，便于回滚和排查问题</li>
+                <li><strong>使用测试环境</strong>：在非生产环境中测试所有权限更改</li>
+                <li><strong>参考文档</strong>：遇到复杂问题时，参考Microsoft官方文档</li>
+            </ol>
+        </div>
+        
+        <div class="card">
+            <h2>八、总结</h2>
+            
+            <p>通过本文档的指导，您可以成功通过安全角色管理控制Customer Insights - Journeys导航栏的显示。核心步骤包括：</p>
+            
+            <ol>
+                <li>创建一个从现有角色复制的自定义安全角色</li>
+                <li>在新角色中移除与Journeys相关实体的所有权限</li>
+                <li>将新角色分配给目标用户</li>
+                <li>验证配置是否生效</li>
+            </ol>
+            
+            <p>遵循本文档的最佳实践和故障排除指南，可以确保您的权限配置既安全又高效，为不同用户提供恰到好处的访问权限。</p>
+            
+            <div class="tip">
+                <strong>最终目标</strong>：通过精细的安全角色管理，确保用户只能看到和访问与其工作职责相关的功能，提高系统的安全性和用户体验。
+            </div>
+        </div>
+        </div>
+    </div>
+</body>
+</html>
